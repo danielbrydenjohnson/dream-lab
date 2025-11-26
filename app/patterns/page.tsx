@@ -28,6 +28,13 @@ type CountItem = {
   count: number;
 };
 
+type SymbolCluster = {
+  label: string;
+  description: string;
+  totalCount: number;
+  items: string[];
+};
+
 export default function PatternsPage() {
   const [dreams, setDreams] = useState<Dream[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
@@ -40,6 +47,10 @@ export default function PatternsPage() {
 
   const [showAllSymbols, setShowAllSymbols] = useState(false);
   const [showAllThemes, setShowAllThemes] = useState(false);
+
+  const [clusters, setClusters] = useState<SymbolCluster[] | null>(null);
+  const [loadingClusters, setLoadingClusters] = useState(false);
+  const [clusterError, setClusterError] = useState<string | null>(null);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
@@ -174,6 +185,45 @@ export default function PatternsPage() {
     }
   }
 
+  async function handleClusterSymbols() {
+    setClusterError(null);
+    setClusters(null);
+
+    if (symbolCounts.length < 3) {
+      setClusterError(
+        "You need a few more recurring symbols before clustering becomes useful. Generate more interpretations and try again."
+      );
+      return;
+    }
+
+    try {
+      setLoadingClusters(true);
+
+      // Limit the number of symbols sent to keep prompts compact.
+      const topSymbolsForApi = symbolCounts.slice(0, 30);
+
+      const res = await fetch("/api/cluster-symbols", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          symbols: topSymbolsForApi,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`API error: ${res.status}`);
+      }
+
+      const data = await res.json();
+      setClusters(data.clusters ?? []);
+    } catch (error) {
+      console.error("Error clustering symbols:", error);
+      setClusterError("Failed to build clusters. Try again later.");
+    } finally {
+      setLoadingClusters(false);
+    }
+  }
+
   if (authChecked && !userId) {
     return (
       <main className="min-h-screen bg-slate-950 text-white">
@@ -248,6 +298,68 @@ export default function PatternsPage() {
 
         {totalDreams > 0 && (
           <>
+            {/* Symbol clusters section */}
+            <section className="mb-6 p-4 rounded-md bg-slate-900 border border-slate-800">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-xl font-semibold">Symbol clusters</h2>
+                <button
+                  onClick={handleClusterSymbols}
+                  disabled={loadingClusters || symbolCounts.length === 0}
+                  className="px-4 py-2 rounded-md bg-indigo-500 hover:bg-indigo-600 disabled:opacity-60 disabled:cursor-not-allowed text-sm font-medium"
+                >
+                  {loadingClusters ? "Clustering..." : "Build clusters"}
+                </button>
+              </div>
+
+              {clusterError && (
+                <p className="text-sm text-red-400 mb-2">{clusterError}</p>
+              )}
+
+              {clusters && clusters.length > 0 ? (
+                <div className="space-y-3">
+                  {clusters.map((cluster, idx) => (
+                    <div
+                      key={idx}
+                      className="border border-slate-800 rounded-md p-3 bg-slate-950"
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <h3 className="text-sm font-semibold text-slate-100">
+                          {cluster.label}
+                        </h3>
+                        <span className="text-xs text-slate-500">
+                          {cluster.totalCount} symbol occurrence
+                          {cluster.totalCount === 1 ? "" : "s"}
+                        </span>
+                      </div>
+                      {cluster.description && (
+                        <p className="text-xs text-slate-300 mb-2">
+                          {cluster.description}
+                        </p>
+                      )}
+                      {cluster.items && cluster.items.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {cluster.items.map((item, i) => (
+                            <span
+                              key={i}
+                              className="px-2 py-0.5 rounded-full bg-slate-800 text-[10px] text-slate-200"
+                            >
+                              {item}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : !loadingClusters ? (
+                <p className="text-sm text-slate-400">
+                  Use clustering to see how your recurring symbols group into a
+                  smaller number of meaningful domains. This becomes more useful
+                  as you log more dreams and extract more symbols.
+                </p>
+              ) : null}
+            </section>
+
             <section className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="p-4 rounded-md bg-slate-900 border border-slate-800">
                 <div className="flex items-center justify-between mb-2">

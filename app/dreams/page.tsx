@@ -27,6 +27,7 @@ export default function DreamsPage() {
   const [dreams, setDreams] = useState<Dream[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
@@ -71,6 +72,19 @@ export default function DreamsPage() {
     return String(value);
   }
 
+  const trimmedSearch = searchTerm.trim().toLowerCase();
+
+  const filteredDreams =
+    trimmedSearch.length === 0
+      ? dreams
+      : dreams.filter((dream) => {
+          const title = (dream.title || "").toLowerCase();
+          const text = dream.rawText.toLowerCase();
+          return (
+            title.includes(trimmedSearch) || text.includes(trimmedSearch)
+          );
+        });
+
   if (authChecked && !userId) {
     return (
       <main className="min-h-screen bg-slate-950 text-white">
@@ -97,7 +111,7 @@ export default function DreamsPage() {
       <div className="max-w-2xl mx-auto px-4 py-6">
         <TopNav />
 
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-3xl font-bold">Your dreams</h1>
           <Link
             href="/dreams/new"
@@ -107,13 +121,36 @@ export default function DreamsPage() {
           </Link>
         </div>
 
+        {dreams.length > 0 && (
+          <div className="mb-4">
+            <label className="block text-xs uppercase tracking-wide text-slate-500 mb-1">
+              Search dreams
+            </label>
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search by title or text..."
+              className="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+            <p className="mt-1 text-xs text-slate-500">
+              Showing {filteredDreams.length} of {dreams.length} dreams
+              {trimmedSearch ? ` for "${searchTerm}"` : ""}.
+            </p>
+          </div>
+        )}
+
         {dreams.length === 0 ? (
           <p className="text-center text-slate-400 mt-10">
             No dreams saved yet. Start by logging your first one.
           </p>
+        ) : filteredDreams.length === 0 ? (
+          <p className="text-center text-slate-400 mt-10">
+            No dreams match your search.
+          </p>
         ) : (
           <div className="flex flex-col gap-4">
-            {dreams.map((dream) => (
+            {filteredDreams.map((dream) => (
               <Link
                 key={dream.id}
                 href={`/dreams/${dream.id}`}

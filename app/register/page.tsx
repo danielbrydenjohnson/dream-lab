@@ -8,9 +8,18 @@ import {
   sendEmailVerification,
 } from "firebase/auth";
 import { auth } from "@/lib/firebaseAuth";
+import {
+  doc,
+  getDoc,
+  setDoc,
+  serverTimestamp,
+} from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -22,32 +31,79 @@ export default function RegisterPage() {
     setErrorMessage(null);
     setInfoMessage(null);
 
-    if (!email.trim() || !password.trim()) {
-      setErrorMessage("Email and password are required.");
+    const trimmedName = name.trim();
+    const trimmedUsername = username.trim().toLowerCase();
+    const trimmedEmail = email.trim();
+    const trimmedPassword = password.trim();
+
+    if (!trimmedName || !trimmedUsername || !trimmedEmail || !trimmedPassword) {
+      setErrorMessage("Name, username, email and password are required.");
+      return;
+    }
+
+    if (!/^[a-z0-9_\.]+$/.test(trimmedUsername)) {
+      setErrorMessage(
+        "Username can only contain lowercase letters, numbers, dots and underscores."
+      );
       return;
     }
 
     setSubmitting(true);
     try {
-      const cred = await createUserWithEmailAndPassword(auth, email, password);
+      // 1) Check username availability directly in Firestore
+      const usernameRef = doc(db, "usernames", trimmedUsername);
+      const usernameSnap = await getDoc(usernameRef);
 
-      // Send welcome / verification email
-      if (cred.user) {
-        try {
-          await sendEmailVerification(cred.user);
-          setInfoMessage(
-            "Welcome to Dream Lab. Check your email to verify your account and complete setup."
-          );
-        } catch (err) {
-          console.error("Error sending verification email:", err);
-          // Not fatal for sign up, but worth surfacing
-          setInfoMessage(
-            "Account created. If you do not see a verification email, you can request one again from your account later."
-          );
-        }
+      if (usernameSnap.exists()) {
+        setErrorMessage("That username is already taken. Try another one.");
+        setSubmitting(false);
+        return;
       }
 
-      // After a short delay, send them to the home/dashboard
+      // 2) Create auth user
+      const cred = await createUserWithEmailAndPassword(
+        auth,
+        trimmedEmail,
+        trimmedPassword
+      );
+
+      if (!cred.user) {
+        setErrorMessage("Failed to create user account.");
+        setSubmitting(false);
+        return;
+      }
+
+      const uid = cred.user.uid;
+
+      // 3) Create user profile and username mapping
+      const userRef = doc(db, "users", uid);
+      await setDoc(userRef, {
+        uid,
+        email: trimmedEmail,
+        name: trimmedName,
+        username: trimmedUsername,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+
+      await setDoc(usernameRef, {
+        uid,
+        createdAt: serverTimestamp(),
+      });
+
+      // 4) Send verification email
+      try {
+        await sendEmailVerification(cred.user);
+        setInfoMessage(
+          "Welcome to Dream Lab. Check your email to verify your account and complete setup."
+        );
+      } catch (err) {
+        console.error("Error sending verification email:", err);
+        setInfoMessage(
+          "Account created. If you do not see a verification email, you can request one again from your account later."
+        );
+      }
+
       setTimeout(() => {
         router.push("/");
       }, 1500);
@@ -76,6 +132,32 @@ export default function RegisterPage() {
         </p>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div>
+            <label className="block text-sm mb-1">Name</label>
+            <input
+              type="text"
+              className="w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:border-indigo-500"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              autoComplete="name"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm mb-1">Username</label>
+            <input
+              type="text"
+              className="w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:border-indigo-500"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              autoComplete="username"
+              placeholder="for example dreamwalker"
+            />
+            <p className="mt-1 text-xs text-slate-500">
+              Lowercase letters, numbers, dots and underscores only.
+            </p>
+          </div>
+
           <div>
             <label className="block text-sm mb-1">Email</label>
             <input

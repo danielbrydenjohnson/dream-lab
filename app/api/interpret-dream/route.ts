@@ -43,16 +43,16 @@ and also extracts compact symbols and themes for pattern tracking.
    - Treat the dream as a message from the deeper self or unconscious
 
 3) Symbols:
-   - Return a SHORT list of key symbols in the dream
+   - Return a VERY SHORT list of key symbols in the dream
    - These are objects, locations, figures, or images that stand out
    - Each symbol should be a very short phrase (for example "ocean", "stairs", "abandoned house")
-   - Return AT MOST 5 symbols
+   - Return AT MOST 3 symbols
 
 4) Themes:
-   - Return a SHORT list of core themes in the dream
+   - Return a VERY SHORT list of core themes in the dream
    - These are abstract ideas like "loss", "transformation", "feeling watched", "being late"
    - Each theme should be a very short phrase
-   - Return AT MOST 5 themes
+   - Return AT MOST 3 themes
 
 Return ONLY valid JSON with exactly these keys:
 - "psychInterpretation": string
@@ -104,14 +104,14 @@ Here is the dream text:
       ? parsed.symbols
           .map((s) => String(s).trim())
           .filter(Boolean)
-          .slice(0, 5)
+          .slice(0, 3)
       : [];
 
     const themes = Array.isArray(parsed.themes)
       ? parsed.themes
           .map((t) => String(t).trim())
           .filter(Boolean)
-          .slice(0, 5)
+          .slice(0, 3)
       : [];
 
     if (dreamId) {

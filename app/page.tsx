@@ -13,6 +13,7 @@ import { db } from "@/lib/firebase";
 import { auth } from "@/lib/firebaseAuth";
 import { onAuthStateChanged } from "firebase/auth";
 import TopNav from "@/components/TopNav";
+import { calculateStreaks, DreamForStreaks } from "@/lib/streaks";
 
 type Dream = {
   id: string;
@@ -90,6 +91,44 @@ export default function HomePage() {
     return String(value);
   }
 
+  // Helper to normalise createdAt to Date for streaks
+  function toDateFromCreatedAt(value: any): Date | null {
+    if (!value) return null;
+    if (value instanceof Date) {
+      return isNaN(value.getTime()) ? null : value;
+    }
+    if (typeof value === "string") {
+      const d = new Date(value);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    if (typeof value.toDate === "function") {
+      const d = value.toDate();
+      return d instanceof Date && !isNaN(d.getTime()) ? d : null;
+    }
+    return null;
+  }
+
+  // Compute streak stats
+  let currentStreak = 0;
+  let bestStreak = 0;
+  let daysLoggedThisWeek = 0;
+
+  if (!loadingDreams && dreams.length > 0) {
+    const streakInput: DreamForStreaks[] = dreams
+      .map((d) => {
+        const date = toDateFromCreatedAt(d.createdAt);
+        return date ? { createdAt: date } : null;
+      })
+      .filter((d): d is DreamForStreaks => d !== null);
+
+    if (streakInput.length > 0) {
+      const stats = calculateStreaks(streakInput);
+      currentStreak = stats.currentStreak;
+      bestStreak = stats.bestStreak;
+      daysLoggedThisWeek = stats.daysLoggedThisWeek;
+    }
+  }
+
   return (
     <main className="min-h-screen bg-slate-950 text-white">
       <div className="max-w-4xl mx-auto px-4 py-6">
@@ -98,7 +137,7 @@ export default function HomePage() {
         {!authChecked ? (
           <p className="text-slate-400">Checking your session...</p>
         ) : !userId ? (
-          // LOGGED OUT VIEW — UPDATED WITH OPTION 2
+          // LOGGED OUT VIEW
           <section className="mt-10 max-w-2xl mx-auto rounded-xl border border-slate-800 bg-slate-900/80 p-8 text-center">
             <h1 className="text-4xl font-bold mb-6">Dream Lab</h1>
 
@@ -129,7 +168,7 @@ export default function HomePage() {
             </div>
           </section>
         ) : (
-          // LOGGED IN DASHBOARD (UNCHANGED)
+          // LOGGED IN DASHBOARD
           <>
             <section className="mt-2 mb-6">
               <h1 className="text-3xl font-bold mb-2">
@@ -141,7 +180,7 @@ export default function HomePage() {
               </p>
             </section>
 
-            <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <section className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
               <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-4">
                 <p className="text-xs uppercase tracking-wide text-slate-500 mb-1">
                   Dreams logged
@@ -195,6 +234,31 @@ export default function HomePage() {
                   <p className="text-sm text-slate-400">
                     No dreams logged yet.
                   </p>
+                )}
+              </div>
+
+              <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-4">
+                <p className="text-xs uppercase tracking-wide text-slate-500 mb-1">
+                  Dream streak
+                </p>
+                {loadingDreams ? (
+                  <p className="text-2xl font-semibold text-slate-300">
+                    ...
+                  </p>
+                ) : (
+                  <>
+                    <p className="text-2xl font-semibold">
+                      {currentStreak} day{currentStreak === 1 ? "" : "s"}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Best streak: {bestStreak} day
+                      {bestStreak === 1 ? "" : "s"}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      This week: {daysLoggedThisWeek} day
+                      {daysLoggedThisWeek === 1 ? "" : "s"}
+                    </p>
+                  </>
                 )}
               </div>
             </section>
