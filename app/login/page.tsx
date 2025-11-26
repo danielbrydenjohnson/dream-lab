@@ -21,11 +21,11 @@ export default function LoginPage() {
     try {
       await signInWithEmailAndPassword(auth, email, password);
 
-      // FIXED: redirect to HOME dashboard
+      // Redirect to HOME dashboard
       router.push("/");
     } catch (err: any) {
       console.error("Login failed:", err);
-      setError(err.message || "Failed to log in.");
+      setError("Invalid email or password.");
       setLoading(false);
     }
   }
@@ -42,13 +42,16 @@ export default function LoginPage() {
             className="p-3 rounded-md bg-slate-800 text-white focus:outline-none"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
           />
+
           <input
             type="password"
             placeholder="Password"
             className="p-3 rounded-md bg-slate-800 text-white focus:outline-none"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            autoComplete="current-password"
           />
 
           {error && <p className="text-red-400 text-sm">{error}</p>}
@@ -61,6 +64,11 @@ export default function LoginPage() {
             {loading ? "Logging in…" : "Log in"}
           </button>
         </form>
+
+        {/* Forgot Password Link */}
+        <p className="text-center text-sm text-indigo-400 hover:text-indigo-300 mt-3">
+          <Link href="/forgot-password">Forgot your password?</Link>
+        </p>
 
         <p className="text-center text-sm text-slate-400 mt-4">
           No account?{" "}

@@ -1,94 +1,77 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { onAuthStateChanged, signOut, User } from "firebase/auth";
 import { auth } from "@/lib/firebaseAuth";
-import { onAuthStateChanged, signOut } from "firebase/auth";
 
 export default function TopNav() {
-  const pathname = usePathname();
-  const router = useRouter();
-  const [loggedIn, setLoggedIn] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
-      setLoggedIn(!!user);
+    const unsub = onAuthStateChanged(auth, (u) => {
+      setUser(u);
       setAuthChecked(true);
     });
     return () => unsub();
   }, []);
 
-  async function handleLogout() {
-    try {
-      await signOut(auth);
-      router.push("/login");
-    } catch (err) {
-      console.error("Error signing out:", err);
-    }
-  }
-
-  function linkClass(target: string) {
-    const isActive = pathname === target;
-    return [
-      "px-3 py-1 rounded-md text-sm font-medium",
-      isActive
-        ? "bg-slate-800 text-white"
-        : "text-slate-300 hover:text-white hover:bg-slate-800",
-    ].join(" ");
-  }
-
   return (
-    <nav className="mb-6 rounded-xl border border-slate-800 bg-slate-900/80 px-4 py-3 flex items-center justify-between backdrop-blur">
-      <div className="flex items-center gap-3">
-        <Link href="/" className="text-lg font-semibold text-white">
-          Dream Lab
-        </Link>
-        <span className="hidden text-slate-500 text-xs sm:inline">
-          Map your dream world over time
-        </span>
-      </div>
+    <nav className="w-full flex items-center justify-between mb-6 py-3">
+      <Link href="/" className="text-xl font-semibold text-white">
+        Dream Lab
+      </Link>
 
-      <div className="flex items-center gap-2">
-        <Link href="/" className={linkClass("/")}>
-          Home
-        </Link>
-        <Link href="/dreams" className={linkClass("/dreams")}>
-          Dreams
-        </Link>
-        <Link href="/patterns" className={linkClass("/patterns")}>
-          Patterns
-        </Link>
-      </div>
+      {!authChecked ? (
+        <div className="text-sm text-slate-400">...</div>
+      ) : user ? (
+        <div className="flex items-center gap-4">
+          <Link
+            href="/dreams"
+            className="text-sm text-slate-300 hover:text-white"
+          >
+            Dreams
+          </Link>
 
-      <div className="flex items-center gap-2">
-        {!authChecked ? (
-          <span className="text-xs text-slate-400">Checking auth...</span>
-        ) : loggedIn ? (
+          <Link
+            href="/patterns"
+            className="text-sm text-slate-300 hover:text-white"
+          >
+            Patterns
+          </Link>
+
+          {/* NEW — Account page link */}
+          <Link
+            href="/account"
+            className="text-sm text-slate-300 hover:text-white"
+          >
+            Account
+          </Link>
+
           <button
-            onClick={handleLogout}
-            className="px-3 py-1 rounded-md border border-slate-600 text-xs text-slate-200 hover:bg-slate-800"
+            onClick={() => signOut(auth)}
+            className="text-sm text-red-400 hover:text-red-300"
           >
             Log out
           </button>
-        ) : (
-          <>
-            <Link
-              href="/login"
-              className="px-3 py-1 rounded-md border border-slate-600 text-xs text-slate-200 hover:bg-slate-800"
-            >
-              Log in
-            </Link>
-            <Link
-              href="/register"
-              className="px-3 py-1 rounded-md bg-indigo-500 hover:bg-indigo-600 text-xs text-white"
-            >
-              Sign up
-            </Link>
-          </>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div className="flex items-center gap-4">
+          <Link
+            href="/login"
+            className="text-sm text-slate-300 hover:text-white"
+          >
+            Log in
+          </Link>
+          <Link
+            href="/register"
+            className="text-sm text-indigo-400 hover:text-indigo-300"
+          >
+            Sign up
+          </Link>
+        </div>
+      )}
     </nav>
   );
 }
