@@ -10,7 +10,6 @@ import {
   where,
 } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
-import { useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
 import { auth } from "@/lib/firebaseAuth";
 import TopNav from "@/components/TopNav";
@@ -20,10 +19,11 @@ type Dream = {
   title?: string;
   rawText: string;
   createdAt: any; // Firestore Timestamp or string
+  psychInterpretation?: string;
+  mysticInterpretation?: string;
 };
 
 export default function DreamsPage() {
-  const router = useRouter();
   const [dreams, setDreams] = useState<Dream[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
@@ -87,19 +87,31 @@ export default function DreamsPage() {
 
   if (authChecked && !userId) {
     return (
-      <main className="min-h-screen bg-slate-950 text-white">
-        <div className="max-w-2xl mx-auto px-4 py-6">
+      <main className="min-h-screen bg-slate-950 text-white relative overflow-hidden">
+        {/* Background glow */}
+        <div
+          className="pointer-events-none absolute inset-0 opacity-60"
+          aria-hidden="true"
+        >
+          <div className="absolute -top-40 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-indigo-600/40 blur-3xl" />
+          <div className="absolute bottom-[-120px] right-[-60px] h-72 w-72 rounded-full bg-sky-500/30 blur-3xl" />
+        </div>
+
+        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
           <TopNav />
-          <div className="mt-8 text-center">
-            <p className="mb-4">
-              You need to be logged in to see your dreams.
-            </p>
-            <Link
-              href="/login"
-              className="px-4 py-2 rounded-md bg-indigo-500 hover:bg-indigo-600 text-white font-medium"
-            >
-              Go to login
-            </Link>
+          <div className="mt-16 flex flex-col items-center text-center">
+            <div className="max-w-md rounded-2xl border border-white/10 bg-slate-950/70 backdrop-blur-md p-6 shadow-xl shadow-black/40">
+              <h1 className="text-2xl font-semibold mb-3">Sign in to continue</h1>
+              <p className="text-sm text-slate-300 mb-5">
+                You need to be logged in to view and search your dreams.
+              </p>
+              <Link
+                href="/login"
+                className="inline-flex items-center justify-center px-5 py-2.5 rounded-full bg-indigo-500 hover:bg-indigo-600 text-sm font-medium text-white shadow-md shadow-indigo-500/40 transition transform hover:-translate-y-0.5"
+              >
+                Go to login
+              </Link>
+            </div>
           </div>
         </div>
       </main>
@@ -107,66 +119,141 @@ export default function DreamsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white">
-      <div className="max-w-2xl mx-auto px-4 py-6">
+    <main className="min-h-screen bg-slate-950 text-white relative overflow-hidden">
+      {/* Background glow */}
+      <div
+        className="pointer-events-none absolute inset-0 opacity-60"
+        aria-hidden="true"
+      >
+        <div className="absolute -top-40 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-indigo-600/40 blur-3xl" />
+        <div className="absolute bottom-[-120px] right-[-60px] h-72 w-72 rounded-full bg-sky-500/30 blur-3xl" />
+      </div>
+
+      <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
         <TopNav />
 
-        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-3xl font-bold">Your dreams</h1>
+        {/* Header */}
+        <div className="mt-4 mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight">
+              Your dreams
+            </h1>
+            <p className="text-sm text-slate-400 mt-1">
+              Browse, search, and revisit the simulations you have already
+              captured.
+            </p>
+          </div>
           <Link
             href="/dreams/new"
-            className="px-4 py-2 rounded-md bg-indigo-500 hover:bg-indigo-600 text-white font-medium"
+            className="inline-flex items-center justify-center px-4 py-2.5 rounded-full bg-indigo-500 hover:bg-indigo-600 text-sm font-medium text-white shadow-md shadow-indigo-500/30 transition transform hover:-translate-y-0.5"
           >
             Write a new dream
           </Link>
         </div>
 
+        {/* Search */}
         {dreams.length > 0 && (
-          <div className="mb-4">
-            <label className="block text-xs uppercase tracking-wide text-slate-500 mb-1">
-              Search dreams
-            </label>
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by title or text..."
-              className="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-            <p className="mt-1 text-xs text-slate-500">
-              Showing {filteredDreams.length} of {dreams.length} dreams
-              {trimmedSearch ? ` for "${searchTerm}"` : ""}.
-            </p>
+          <div className="mb-5 rounded-2xl border border-white/10 bg-slate-950/70 backdrop-blur-md p-4 sm:p-5 shadow-lg shadow-black/40">
+            <div className="flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-4">
+              <div className="flex-1">
+                <label className="block text-[11px] uppercase tracking-[0.18em] text-slate-400 mb-1">
+                  Search dreams
+                </label>
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search by title or text..."
+                  className="w-full rounded-xl border border-white/10 bg-slate-900/70 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/70 focus:border-indigo-400 shadow-inner shadow-black/40"
+                />
+              </div>
+              <div className="text-xs text-slate-400">
+                <p className="mb-1">
+                  Showing{" "}
+                  <span className="text-slate-100 font-medium">
+                    {filteredDreams.length}
+                  </span>{" "}
+                  of{" "}
+                  <span className="text-slate-100 font-medium">
+                    {dreams.length}
+                  </span>{" "}
+                  dreams
+                </p>
+                {trimmedSearch && (
+                  <p className="text-xs text-slate-500">
+                    Filtered by{" "}
+                    <span className="text-slate-200">
+                      "{searchTerm.trim()}"
+                    </span>
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
         )}
 
+        {/* States */}
         {dreams.length === 0 ? (
-          <p className="text-center text-slate-400 mt-10">
-            No dreams saved yet. Start by logging your first one.
-          </p>
+          <section className="mt-10 rounded-2xl border border-dashed border-slate-700 bg-slate-950/70 p-6 text-center shadow-lg shadow-black/40">
+            <h2 className="text-lg font-semibold mb-2">
+              No dreams saved yet
+            </h2>
+            <p className="text-sm text-slate-400 mb-4">
+              Start by logging your first dream. Over time this page becomes
+              your archive of strange storylines, recurring places, and familiar
+              characters.
+            </p>
+            <Link
+              href="/dreams/new"
+              className="inline-flex items-center justify-center px-4 py-2.5 rounded-full bg-indigo-500 hover:bg-indigo-600 text-sm font-medium text-white shadow-md shadow-indigo-500/30 transition"
+            >
+              Log your first dream
+            </Link>
+          </section>
         ) : filteredDreams.length === 0 ? (
-          <p className="text-center text-slate-400 mt-10">
-            No dreams match your search.
-          </p>
+          <section className="mt-10 rounded-2xl border border-slate-800 bg-slate-950/80 p-6 text-center shadow-lg shadow-black/40">
+            <h2 className="text-lg font-semibold mb-2">
+              No dreams match your search
+            </h2>
+            <p className="text-sm text-slate-400">
+              Try a different word or clear the search to see all your dreams
+              again.
+            </p>
+          </section>
         ) : (
           <div className="flex flex-col gap-4">
-            {filteredDreams.map((dream) => (
-              <Link
-                key={dream.id}
-                href={`/dreams/${dream.id}`}
-                className="block p-4 rounded-md bg-slate-900 border border-slate-800 hover:border-slate-600 hover:bg-slate-800 transition"
-              >
-                <p className="text-xs text-slate-400 mb-1">
-                  {formatDate(dream.createdAt)}
-                </p>
-                <p className="text-white font-semibold mb-1">
-                  {dream.title?.trim() || "Untitled dream"}
-                </p>
-                <p className="text-slate-300 line-clamp-2 whitespace-pre-line text-sm">
-                  {dream.rawText}
-                </p>
-              </Link>
-            ))}
+            {filteredDreams.map((dream) => {
+              const interpreted =
+                Boolean(dream.psychInterpretation) ||
+                Boolean(dream.mysticInterpretation);
+
+              return (
+                <Link
+                  key={dream.id}
+                  href={`/dreams/${dream.id}`}
+                  className="block rounded-2xl border border-white/10 bg-slate-950/80 p-4 sm:p-5 hover:border-indigo-400/80 hover:bg-slate-900/90 hover:shadow-xl hover:shadow-indigo-500/20 transition transform hover:-translate-y-0.5"
+                >
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div>
+                      <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400 mb-1">
+                        {formatDate(dream.createdAt)}
+                      </p>
+                      <p className="text-base sm:text-lg font-semibold text-white">
+                        {dream.title?.trim() || "Untitled dream"}
+                      </p>
+                    </div>
+                    {interpreted && (
+                      <span className="inline-flex items-center rounded-full bg-emerald-500/15 px-3 py-1 text-[11px] font-medium text-emerald-300 border border-emerald-500/40">
+                        Interpreted
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-slate-300 line-clamp-3 whitespace-pre-line">
+                    {dream.rawText}
+                  </p>
+                </Link>
+              );
+            })}
           </div>
         )}
       </div>

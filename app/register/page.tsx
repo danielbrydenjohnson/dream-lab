@@ -8,12 +8,7 @@ import {
   sendEmailVerification,
 } from "firebase/auth";
 import { auth } from "@/lib/firebaseAuth";
-import {
-  doc,
-  getDoc,
-  setDoc,
-  serverTimestamp,
-} from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 export default function RegisterPage() {
@@ -122,90 +117,130 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white flex items-center justify-center px-4">
-      <div className="w-full max-w-md bg-slate-900/80 border border-slate-800 rounded-xl p-6">
-        <h1 className="text-2xl font-bold mb-2 text-center">
-          Create your Dream Lab account
-        </h1>
-        <p className="text-sm text-slate-400 mb-6 text-center">
-          Start building a private record of your dreams and patterns.
-        </p>
+    <main className="min-h-screen bg-slate-950 text-white relative overflow-hidden flex items-center justify-center px-4 sm:px-6">
+      {/* Background glow */}
+      <div
+        className="pointer-events-none absolute inset-0 opacity-60"
+        aria-hidden="true"
+      >
+        <div className="absolute -top-40 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-indigo-600/40 blur-3xl" />
+        <div className="absolute bottom-[-120px] right-[-60px] h-72 w-72 rounded-full bg-sky-500/30 blur-3xl" />
+      </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div>
-            <label className="block text-sm mb-1">Name</label>
-            <input
-              type="text"
-              className="w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:border-indigo-500"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              autoComplete="name"
-            />
+      <div className="relative w-full max-w-md">
+        {/* App title and tagline */}
+        <div className="mb-5 text-center">
+          <div className="inline-flex items-center gap-2 mb-2">
+            <div className="h-7 w-7 rounded-full bg-gradient-to-tr from-indigo-500 via-sky-400 to-violet-500 shadow-md shadow-indigo-500/40" />
+            <h1 className="text-2xl font-semibold tracking-tight">
+              Dream Lab
+            </h1>
           </div>
+          <p className="text-xs sm:text-sm text-slate-400">
+            Create a private space for your dreams, patterns and symbols.
+          </p>
+        </div>
 
-          <div>
-            <label className="block text-sm mb-1">Username</label>
-            <input
-              type="text"
-              className="w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:border-indigo-500"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              autoComplete="username"
-              placeholder="for example dreamwalker"
-            />
-            <p className="mt-1 text-xs text-slate-500">
-              Lowercase letters, numbers, dots and underscores only.
-            </p>
-          </div>
+        {/* Register card */}
+        <div className="w-full rounded-2xl border border-white/10 bg-slate-950/85 backdrop-blur-xl px-5 py-6 sm:px-6 sm:py-7 shadow-xl shadow-black/40">
+          <h2 className="text-lg sm:text-xl font-semibold mb-3 text-center">
+            Create your account
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-400 mb-5 text-center">
+            A few details, then you can start logging dreams.
+          </p>
 
-          <div>
-            <label className="block text-sm mb-1">Email</label>
-            <input
-              type="email"
-              className="w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:border-indigo-500"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
-            />
-          </div>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <div>
+              <label className="block text-xs uppercase tracking-[0.18em] text-slate-400 mb-1.5">
+                Name
+              </label>
+              <input
+                type="text"
+                className="w-full rounded-xl border border-white/10 bg-slate-900/80 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/70 focus:border-indigo-400 shadow-inner shadow-black/40"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                autoComplete="name"
+                placeholder="Your name"
+              />
+            </div>
 
-          <div>
-            <label className="block text-sm mb-1">Password</label>
-            <input
-              type="password"
-              className="w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:border-indigo-500"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="new-password"
-            />
-          </div>
+            <div>
+              <label className="block text-xs uppercase tracking-[0.18em] text-slate-400 mb-1.5">
+                Username
+              </label>
+              <input
+                type="text"
+                className="w-full rounded-xl border border-white/10 bg-slate-900/80 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/70 focus:border-indigo-400 shadow-inner shadow-black/40"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                autoComplete="username"
+                placeholder="for example dreamwalker"
+              />
+              <p className="mt-1.5 text-[11px] text-slate-500">
+                Lowercase letters, numbers, dots and underscores only.
+              </p>
+            </div>
 
-          {errorMessage && (
-            <p className="text-sm text-red-400">{errorMessage}</p>
-          )}
+            <div>
+              <label className="block text-xs uppercase tracking-[0.18em] text-slate-400 mb-1.5">
+                Email
+              </label>
+              <input
+                type="email"
+                className="w-full rounded-xl border border-white/10 bg-slate-900/80 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/70 focus:border-indigo-400 shadow-inner shadow-black/40"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+                placeholder="you@example.com"
+              />
+            </div>
 
-          {infoMessage && (
-            <p className="text-sm text-emerald-400">{infoMessage}</p>
-          )}
+            <div>
+              <label className="block text-xs uppercase tracking-[0.18em] text-slate-400 mb-1.5">
+                Password
+              </label>
+              <input
+                type="password"
+                className="w-full rounded-xl border border-white/10 bg-slate-900/80 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/70 focus:border-indigo-400 shadow-inner shadow-black/40"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="new-password"
+                placeholder="Choose a secure password"
+              />
+            </div>
 
-          <button
-            type="submit"
-            disabled={submitting}
-            className="mt-2 w-full px-4 py-2 rounded-md bg-indigo-500 hover:bg-indigo-600 disabled:bg-slate-700 text-white font-medium text-sm"
-          >
-            {submitting ? "Creating account..." : "Sign up"}
-          </button>
-        </form>
+            {errorMessage && (
+              <div className="rounded-xl border border-red-500/60 bg-red-950/70 px-3 py-2 text-xs text-red-100">
+                {errorMessage}
+              </div>
+            )}
 
-        <p className="mt-4 text-xs text-slate-400 text-center">
-          Already have an account?{" "}
-          <Link
-            href="/login"
-            className="text-indigo-400 hover:text-indigo-300 underline"
-          >
-            Log in
-          </Link>
-        </p>
+            {infoMessage && (
+              <div className="rounded-xl border border-emerald-500/60 bg-emerald-950/70 px-3 py-2 text-xs text-emerald-100">
+                {infoMessage}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className="mt-1 w-full inline-flex items-center justify-center px-4 py-2.5 rounded-full bg-indigo-500 hover:bg-indigo-600 disabled:bg-slate-700 text-sm font-medium text-white shadow-md shadow-indigo-500/40 transition transform hover:-translate-y-0.5"
+            >
+              {submitting ? "Creating account..." : "Sign up"}
+            </button>
+          </form>
+
+          <p className="mt-4 text-xs sm:text-sm text-slate-400 text-center">
+            Already have an account?{" "}
+            <Link
+              href="/login"
+              className="text-indigo-300 hover:text-indigo-200"
+            >
+              Log in
+            </Link>
+          </p>
+        </div>
       </div>
     </main>
   );

@@ -91,7 +91,6 @@ export default function HomePage() {
     return String(value);
   }
 
-  // Helper to normalise createdAt to Date for streaks
   function toDateFromCreatedAt(value: any): Date | null {
     if (!value) return null;
     if (value instanceof Date) {
@@ -108,7 +107,6 @@ export default function HomePage() {
     return null;
   }
 
-  // Compute streak stats
   let currentStreak = 0;
   let bestStreak = 0;
   let daysLoggedThisWeek = 0;
@@ -130,103 +128,116 @@ export default function HomePage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white">
-      <div className="max-w-4xl mx-auto px-4 py-6">
+    <main className="min-h-screen bg-slate-950 text-white relative overflow-hidden">
+      {/* Background glow */}
+      <div
+        className="pointer-events-none absolute inset-0 opacity-60"
+        aria-hidden="true"
+      >
+        <div className="absolute -top-40 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-indigo-600/40 blur-3xl" />
+        <div className="absolute bottom-[-120px] right-[-60px] h-72 w-72 rounded-full bg-sky-500/30 blur-3xl" />
+      </div>
+
+      <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
         <TopNav />
 
         {!authChecked ? (
-          <p className="text-slate-400">Checking your session...</p>
+          <div className="mt-10 flex justify-center">
+            <p className="text-slate-400 text-sm">Checking your session...</p>
+          </div>
         ) : !userId ? (
           // LOGGED OUT VIEW
-          <section className="mt-10 max-w-2xl mx-auto rounded-xl border border-slate-800 bg-slate-900/80 p-8 text-center">
-            <h1 className="text-4xl font-bold mb-6">Dream Lab</h1>
+          <section className="mt-16 flex flex-col items-center text-center">
+            <div className="max-w-xl">
+              <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight mb-4">
+                Dream Lab
+              </h1>
+              <p className="text-slate-300 text-base sm:text-lg leading-relaxed mb-6">
+                <span className="text-white font-semibold">
+                  Every night your mind runs a hidden simulation.
+                </span>{" "}
+                You wake up with fragments. Dream Lab is where you catch them,
+                stack them, and watch your own mythology emerge over time.
+              </p>
 
-            <p className="text-slate-300 text-lg leading-relaxed mb-8">
-              <span className="text-white font-semibold">
-                Every night your mind runs a hidden simulation.
-              </span>
-              <br />
-              You wake up and forget the code.
-              <br />
-              Dream Lab is where you catch the fragments, stack them over time,
-              and start to see the symbols and themes that always return.
-            </p>
+              <div className="flex flex-wrap justify-center gap-3">
+                <Link
+                  href="/register"
+                  className="inline-flex items-center justify-center px-5 py-2.5 rounded-full bg-indigo-500 hover:bg-indigo-600 text-sm sm:text-base font-medium text-white shadow-lg shadow-indigo-500/25 transition transform hover:-translate-y-0.5"
+                >
+                  Get started
+                </Link>
+                <Link
+                  href="/login"
+                  className="inline-flex items-center justify-center px-5 py-2.5 rounded-full border border-slate-700 bg-slate-900/60 hover:bg-slate-800 text-sm sm:text-base font-medium text-slate-100 transition"
+                >
+                  Log in
+                </Link>
+              </div>
 
-            <div className="flex justify-center gap-4">
-              <Link
-                href="/register"
-                className="px-5 py-3 rounded-md bg-indigo-500 hover:bg-indigo-600 text-white font-medium"
-              >
-                Get started
-              </Link>
-              <Link
-                href="/login"
-                className="px-5 py-3 rounded-md border border-slate-600 text-slate-200 hover:bg-slate-800 font-medium"
-              >
-                Log in
-              </Link>
+              <p className="mt-6 text-xs text-slate-500">
+                No feeds, no likes. Just you, your dreams, and the patterns
+                underneath.
+              </p>
             </div>
           </section>
         ) : (
           // LOGGED IN DASHBOARD
           <>
-            <section className="mt-2 mb-6">
-              <h1 className="text-3xl font-bold mb-2">
-                Your Dream Lab dashboard
+            <section className="mt-6 mb-6">
+              <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight mb-2">
+                Your dream lab
               </h1>
-              <p className="text-slate-400 text-sm">
-                Quick overview of your dream activity and shortcuts to keep
-                logging and exploring.
+              <p className="text-slate-400 text-sm sm:text-base">
+                A quick snapshot of your dream activity, streaks, and shortcuts
+                to keep logging and exploring.
               </p>
             </section>
 
-            <section className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-              <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-4">
-                <p className="text-xs uppercase tracking-wide text-slate-500 mb-1">
+            {/* Stats grid */}
+            <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+              <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900/90 via-slate-900/60 to-slate-900/20 p-4 sm:p-5 shadow-lg shadow-black/30">
+                <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400 mb-1">
                   Dreams logged
                 </p>
                 {loadingDreams ? (
-                  <p className="text-2xl font-semibold text-slate-300">
-                    ...
-                  </p>
+                  <p className="text-3xl font-semibold text-slate-300">...</p>
                 ) : (
-                  <p className="text-2xl font-semibold">{totalDreams}</p>
+                  <p className="text-3xl font-semibold">{totalDreams}</p>
                 )}
-                <p className="text-xs text-slate-500 mt-1">
-                  Every entry makes patterns clearer.
+                <p className="text-xs text-slate-500 mt-2">
+                  Each entry is another frame in the simulation.
                 </p>
               </div>
 
-              <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-4">
-                <p className="text-xs uppercase tracking-wide text-slate-500 mb-1">
-                  Interpreted dreams
+              <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-indigo-900/70 via-slate-900/60 to-slate-900/20 p-4 sm:p-5 shadow-lg shadow-black/30">
+                <p className="text-[11px] uppercase tracking-[0.18em] text-slate-300 mb-1">
+                  Interpreted
                 </p>
                 {loadingDreams ? (
-                  <p className="text-2xl font-semibold text-slate-300">
-                    ...
-                  </p>
+                  <p className="text-3xl font-semibold text-slate-200">...</p>
                 ) : (
-                  <p className="text-2xl font-semibold">
+                  <p className="text-3xl font-semibold">
                     {interpretedDreams}
                   </p>
                 )}
-                <p className="text-xs text-slate-500 mt-1">
-                  Use AI to extract meaning, symbols and themes.
+                <p className="text-xs text-slate-300/80 mt-2">
+                  AI reflections to pull out symbols and themes.
                 </p>
               </div>
 
-              <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-4">
-                <p className="text-xs uppercase tracking-wide text-slate-500 mb-1">
+              <div className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 sm:p-5 shadow-lg shadow-black/30">
+                <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400 mb-1">
                   Last dream
                 </p>
                 {loadingDreams ? (
                   <p className="text-sm text-slate-300">Loading...</p>
                 ) : lastDream ? (
                   <>
-                    <p className="text-sm text-slate-100 mb-1">
+                    <p className="text-xs text-slate-400 mb-1">
                       {formatDate(lastDream.createdAt)}
                     </p>
-                    <p className="text-xs text-slate-400 line-clamp-2">
+                    <p className="text-xs text-slate-100/90 line-clamp-3">
                       {lastDream.rawText}
                     </p>
                   </>
@@ -237,71 +248,87 @@ export default function HomePage() {
                 )}
               </div>
 
-              <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-4">
-                <p className="text-xs uppercase tracking-wide text-slate-500 mb-1">
-                  Dream streak
-                </p>
-                {loadingDreams ? (
-                  <p className="text-2xl font-semibold text-slate-300">
-                    ...
+              <div className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 sm:p-5 shadow-lg shadow-black/30 flex flex-col justify-between">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400 mb-1">
+                    Dream streak
                   </p>
-                ) : (
-                  <>
-                    <p className="text-2xl font-semibold">
+                  {loadingDreams ? (
+                    <p className="text-3xl font-semibold text-slate-300">
+                      ...
+                    </p>
+                  ) : (
+                    <p className="text-3xl font-semibold">
                       {currentStreak} day{currentStreak === 1 ? "" : "s"}
                     </p>
-                    <p className="text-xs text-slate-500 mt-1">
-                      Best streak: {bestStreak} day
-                      {bestStreak === 1 ? "" : "s"}
+                  )}
+                </div>
+                {!loadingDreams && (
+                  <div className="mt-3 space-y-1.5">
+                    <p className="text-xs text-slate-400">
+                      Best streak:{" "}
+                      <span className="text-slate-100">
+                        {bestStreak} day{bestStreak === 1 ? "" : "s"}
+                      </span>
                     </p>
-                    <p className="text-xs text-slate-500">
-                      This week: {daysLoggedThisWeek} day
-                      {daysLoggedThisWeek === 1 ? "" : "s"}
+                    <p className="text-xs text-slate-400">
+                      This week:{" "}
+                      <span className="text-slate-100">
+                        {daysLoggedThisWeek} day
+                        {daysLoggedThisWeek === 1 ? "" : "s"}
+                      </span>
                     </p>
-                  </>
+                  </div>
                 )}
               </div>
             </section>
 
-            <section className="mb-6 rounded-xl border border-slate-800 bg-slate-900/80 p-4">
-              <h2 className="text-xl font-semibold mb-3">
-                What do you want to do next?
+            {/* Actions */}
+            <section className="mb-8 rounded-2xl border border-white/10 bg-slate-900/80 p-4 sm:p-5">
+              <h2 className="text-lg sm:text-xl font-semibold mb-3">
+                What next
               </h2>
+              <p className="text-xs sm:text-sm text-slate-400 mb-4">
+                Capture last night while it is still fresh, or dive into the
+                patterns you have already started.
+              </p>
               <div className="flex flex-wrap gap-3">
                 <Link
                   href="/dreams/new"
-                  className="px-4 py-2 rounded-md bg-indigo-500 hover:bg-indigo-600 text-white font-medium"
+                  className="inline-flex items-center justify-center px-4 py-2.5 rounded-full bg-indigo-500 hover:bg-indigo-600 text-sm font-medium text-white shadow-md shadow-indigo-500/30 transition transform hover:-translate-y-0.5"
                 >
                   Write a new dream
                 </Link>
                 <Link
                   href="/dreams"
-                  className="px-4 py-2 rounded-md border border-slate-700 text-slate-200 hover:bg-slate-800"
+                  className="inline-flex items-center justify-center px-4 py-2.5 rounded-full border border-slate-700 bg-slate-950/40 hover:bg-slate-800 text-sm font-medium text-slate-100 transition"
                 >
                   View all dreams
                 </Link>
                 <Link
                   href="/patterns"
-                  className="px-4 py-2 rounded-md border border-slate-700 text-slate-200 hover:bg-slate-800"
+                  className="inline-flex items-center justify-center px-4 py-2.5 rounded-full border border-slate-700 bg-slate-950/40 hover:bg-slate-800 text-sm font-medium text-slate-100 transition"
                 >
                   Explore patterns
                 </Link>
               </div>
             </section>
 
+            {/* Empty state */}
             {totalDreams === 0 && !loadingDreams && (
-              <section className="rounded-xl border border-slate-800 bg-slate-900/80 p-4">
+              <section className="rounded-2xl border border-dashed border-slate-700 bg-slate-950/70 p-5 sm:p-6">
                 <h2 className="text-lg font-semibold mb-2">
                   Start mapping your dream world
                 </h2>
-                <p className="text-slate-400 text-sm mb-3">
-                  The real value comes once you have a history of dreams. Aim to
-                  record at least a handful over the next few weeks. Then the
-                  patterns view will begin to show recurring symbols and themes.
+                <p className="text-sm text-slate-400 mb-4">
+                  The real value kicks in once you have a history of dreams.
+                  Aim to record at least a few over the next weeks and the
+                  patterns view will start surfacing recurring symbols and
+                  themes.
                 </p>
                 <Link
                   href="/dreams/new"
-                  className="inline-block px-4 py-2 rounded-md bg-indigo-500 hover:bg-indigo-600 text-white font-medium"
+                  className="inline-flex items-center justify-center px-4 py-2.5 rounded-full bg-indigo-500 hover:bg-indigo-600 text-sm font-medium text-white shadow-md shadow-indigo-500/30 transition"
                 >
                   Log your first dream
                 </Link>

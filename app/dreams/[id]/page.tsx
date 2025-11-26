@@ -13,9 +13,11 @@ import {
 import { db } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebaseAuth";
+import TopNav from "@/components/TopNav";
 
 type Dream = {
   id: string;
+  title?: string;
   rawText: string;
   createdAt: any; // Firestore Timestamp or string
   userId?: string;
@@ -190,190 +192,231 @@ export default function DreamDetailPage() {
     }
   }
 
-  // Loading state
-  if (loading || !authChecked) {
-    return (
-      <main className="min-h-screen flex items-center justify-center bg-slate-950 text-white">
-        <p>Loading dream...</p>
-      </main>
-    );
-  }
+  const isStillLoading =
+    loading || !authChecked || (dream && isOwner === null);
 
-  // No auth
-  if (!userId) {
-    return (
-      <main className="min-h-screen flex items-center justify-center bg-slate-950 text-white">
-        <div className="text-center">
-          <p className="mb-4">You must be logged in to view this dream.</p>
-          <Link
-            href="/login"
-            className="px-4 py-2 rounded-md bg-indigo-500 hover:bg-indigo-600 text-white font-medium"
-          >
-            Go to login
-          </Link>
-        </div>
-      </main>
-    );
-  }
-
-  // Not found
-  if (!dream) {
-    return (
-      <main className="min-h-screen flex items-center justify-center bg-slate-950 text-white">
-        <div className="text-center">
-          <p className="mb-4">Dream not found.</p>
-          <Link
-            href="/dreams"
-            className="px-4 py-2 rounded-md bg-indigo-500 hover:bg-indigo-600 text-white font-medium"
-          >
-            Back to dreams
-          </Link>
-        </div>
-      </main>
-    );
-  }
-
-  // Not owner
-  if (isOwner === false) {
-    return (
-      <main className="min-h-screen flex items-center justify-center bg-slate-950 text-white">
-        <div className="text-center">
-          <p className="mb-4">You do not have access to this dream.</p>
-          <Link
-            href="/dreams"
-            className="px-4 py-2 rounded-md bg-indigo-500 hover:bg-indigo-600 text-white font-medium"
-          >
-            Back to your dreams
-          </Link>
-        </div>
-      </main>
-    );
-  }
-
-  // Owner view
   return (
-    <main className="min-h-screen bg-slate-950 p-6 text-white">
-      <div className="max-w-2xl mx-auto">
-        <div className="mb-4 flex items-center justify-between">
-          <Link
-            href="/dreams"
-            className="text-sm text-slate-300 hover:text-white"
-          >
-            ← Back to dreams
-          </Link>
+    <main className="min-h-screen bg-slate-950 text-white relative overflow-hidden">
+      {/* Background glow */}
+      <div
+        className="pointer-events-none absolute inset-0 opacity-60"
+        aria-hidden="true"
+      >
+        <div className="absolute -top-40 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-indigo-600/40 blur-3xl" />
+        <div className="absolute bottom-[-120px] right-[-60px] h-72 w-72 rounded-full bg-sky-500/30 blur-3xl" />
+      </div>
 
-          <div className="flex items-center gap-2">
-            <Link
-              href={`/dreams/${dream.id}/edit`}
-              className="px-3 py-2 rounded-md bg-slate-700 hover:bg-slate-600 text-sm font-medium"
-            >
-              Edit
-            </Link>
+      <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+        <TopNav />
 
-            <button
-              onClick={handleDelete}
-              disabled={deleting}
-              className="px-3 py-2 rounded-md bg-red-600 hover:bg-red-700 disabled:bg-red-900 text-sm font-medium"
-            >
-              {deleting ? "Deleting..." : "Delete"}
-            </button>
-
-            <button
-              onClick={handleInterpretation}
-              disabled={interpreting}
-              className="px-3 py-2 rounded-md bg-indigo-500 hover:bg-indigo-600 disabled:bg-slate-700 text-sm font-medium"
-            >
-              {interpreting ? "Interpreting..." : "Generate interpretation"}
-            </button>
+        {isStillLoading ? (
+          <div className="mt-20 flex justify-center">
+            <div className="rounded-2xl border border-white/10 bg-slate-950/80 backdrop-blur-md px-6 py-5 shadow-xl shadow-black/40 text-center">
+              <p className="text-sm text-slate-300">Loading dream...</p>
+            </div>
           </div>
-        </div>
+        ) : !userId ? (
+          // No auth
+          <div className="mt-20 flex justify-center">
+            <div className="max-w-md rounded-2xl border border-white/10 bg-slate-950/80 backdrop-blur-md px-6 py-6 shadow-xl shadow-black/40 text-center">
+              <h1 className="text-xl font-semibold mb-3">
+                You need to log in
+              </h1>
+              <p className="text-sm text-slate-300 mb-5">
+                You must be logged in to view this dream.
+              </p>
+              <Link
+                href="/login"
+                className="inline-flex items-center justify-center px-5 py-2.5 rounded-full bg-indigo-500 hover:bg-indigo-600 text-sm font-medium text-white shadow-md shadow-indigo-500/40 transition transform hover:-translate-y-0.5"
+              >
+                Go to login
+              </Link>
+            </div>
+          </div>
+        ) : !dream ? (
+          // Not found
+          <div className="mt-20 flex justify-center">
+            <div className="max-w-md rounded-2xl border border-white/10 bg-slate-950/80 backdrop-blur-md px-6 py-6 shadow-xl shadow-black/40 text-center">
+              <h1 className="text-xl font-semibold mb-3">Dream not found</h1>
+              <p className="text-sm text-slate-300 mb-5">
+                This dream does not exist or may have been deleted.
+              </p>
+              <Link
+                href="/dreams"
+                className="inline-flex items-center justify-center px-5 py-2.5 rounded-full bg-indigo-500 hover:bg-indigo-600 text-sm font-medium text-white shadow-md shadow-indigo-500/40 transition transform hover:-translate-y-0.5"
+              >
+                Back to dreams
+              </Link>
+            </div>
+          </div>
+        ) : isOwner === false ? (
+          // Not owner
+          <div className="mt-20 flex justify-center">
+            <div className="max-w-md rounded-2xl border border-white/10 bg-slate-950/80 backdrop-blur-md px-6 py-6 shadow-xl shadow-black/40 text-center">
+              <h1 className="text-xl font-semibold mb-3">
+                You do not have access
+              </h1>
+              <p className="text-sm text-slate-300 mb-5">
+                This dream belongs to another user.
+              </p>
+              <Link
+                href="/dreams"
+                className="inline-flex items-center justify-center px-5 py-2.5 rounded-full bg-indigo-500 hover:bg-indigo-600 text-sm font-medium text-white shadow-md shadow-indigo-500/40 transition transform hover:-translate-y-0.5"
+              >
+                Back to your dreams
+              </Link>
+            </div>
+          </div>
+        ) : (
+          // Owner view
+          <div className="mt-4 mb-10">
+            {/* Breadcrumb and actions */}
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <Link
+                href="/dreams"
+                className="inline-flex items-center text-xs sm:text-sm text-slate-300 hover:text-white"
+              >
+                <span className="mr-1 text-slate-400">{"←"}</span>
+                Back to dreams
+              </Link>
 
-        <h1 className="text-3xl font-bold mb-2">
-          Dream from {formatDate(dream.createdAt)}
-        </h1>
+              <div className="flex flex-wrap items-center gap-2">
+                <Link
+                  href={`/dreams/${dream.id}/edit`}
+                  className="inline-flex items-center justify-center px-3 py-1.5 rounded-full bg-slate-800 hover:bg-slate-700 text-xs sm:text-sm font-medium text-slate-100 border border-white/10 transition"
+                >
+                  Edit
+                </Link>
 
-        <section className="mt-4 p-4 rounded-md bg-slate-800 mb-6">
-          <h2 className="text-xl font-semibold mb-2">Dream text</h2>
-          <p className="whitespace-pre-line text-slate-100">
-            {dream.rawText}
-          </p>
-        </section>
+                <button
+                  onClick={handleInterpretation}
+                  disabled={interpreting}
+                  className="inline-flex items-center justify-center px-3 py-1.5 rounded-full bg-indigo-500 hover:bg-indigo-600 disabled:bg-slate-700 text-xs sm:text-sm font-medium text-white shadow-md shadow-indigo-500/30 transition"
+                >
+                  {interpreting ? "Interpreting..." : "Generate interpretation"}
+                </button>
 
-        {errorMessage && (
-          <p className="mb-4 text-sm text-red-400">{errorMessage}</p>
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="inline-flex items-center justify-center px-3 py-1.5 rounded-full bg-red-600 hover:bg-red-700 disabled:bg-red-900 text-xs sm:text-sm font-medium text-white transition"
+                >
+                  {deleting ? "Deleting..." : "Delete"}
+                </button>
+              </div>
+            </div>
+
+            {/* Header */}
+            <header className="mb-6">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400 mb-1">
+                {formatDate(dream.createdAt)}
+              </p>
+              <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight mb-1">
+                {dream.title?.trim() || "Untitled dream"}
+              </h1>
+              <p className="text-sm text-slate-400">
+                Full entry plus psychological and mystical interpretations.
+              </p>
+            </header>
+
+            {errorMessage && (
+              <div className="mb-4 rounded-2xl border border-red-500/50 bg-red-950/60 px-4 py-3 text-sm text-red-200">
+                {errorMessage}
+              </div>
+            )}
+
+            {/* Main layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Dream text */}
+              <section className="lg:col-span-2 rounded-2xl border border-white/10 bg-slate-950/80 backdrop-blur-md p-5 shadow-lg shadow-black/40">
+                <h2 className="text-lg font-semibold mb-3">Dream text</h2>
+                <p className="whitespace-pre-line text-sm sm:text-base text-slate-100 leading-relaxed">
+                  {dream.rawText}
+                </p>
+              </section>
+
+              {/* Symbols and themes side panel */}
+              <aside className="space-y-4">
+                <section className="rounded-2xl border border-white/10 bg-slate-950/80 backdrop-blur-md p-4 shadow-lg shadow-black/40">
+                  <h2 className="text-sm font-semibold mb-2">Key symbols</h2>
+                  {symbols.length === 0 ? (
+                    <p className="text-xs text-slate-400">
+                      No symbols extracted yet. Generate an interpretation to
+                      see them.
+                    </p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {symbols.map((symbol, idx) => (
+                        <span
+                          key={idx}
+                          className="inline-flex items-center px-3 py-1 rounded-full bg-slate-800 text-[11px] text-slate-100 border border-white/10"
+                        >
+                          {symbol}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </section>
+
+                <section className="rounded-2xl border border-white/10 bg-slate-950/80 backdrop-blur-md p-4 shadow-lg shadow-black/40">
+                  <h2 className="text-sm font-semibold mb-2">Themes</h2>
+                  {themes.length === 0 ? (
+                    <p className="text-xs text-slate-400">
+                      No themes extracted yet. Generate an interpretation to see
+                      them.
+                    </p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {themes.map((theme, idx) => (
+                        <span
+                          key={idx}
+                          className="inline-flex items-center px-3 py-1 rounded-full bg-slate-800 text-[11px] text-slate-100 border border-white/10"
+                        >
+                          {theme}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              </aside>
+            </div>
+
+            {/* Interpretations */}
+            <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <section className="rounded-2xl border border-white/10 bg-slate-950/80 backdrop-blur-md p-5 shadow-lg shadow-black/40">
+                <h2 className="text-lg font-semibold mb-3">
+                  Psychological interpretation
+                </h2>
+                {psychText ? (
+                  <p className="text-sm text-slate-100 whitespace-pre-line leading-relaxed">
+                    {psychText}
+                  </p>
+                ) : (
+                  <p className="text-sm text-slate-400">
+                    Click "Generate interpretation" to see a psychology based
+                    view of this dream.
+                  </p>
+                )}
+              </section>
+
+              <section className="rounded-2xl border border-white/10 bg-slate-950/80 backdrop-blur-md p-5 shadow-lg shadow-black/40">
+                <h2 className="text-lg font-semibold mb-3">
+                  Mystical interpretation
+                </h2>
+                {mysticText ? (
+                  <p className="text-sm text-slate-100 whitespace-pre-line leading-relaxed">
+                    {mysticText}
+                  </p>
+                ) : (
+                  <p className="text-sm text-slate-400">
+                    Click "Generate interpretation" to see a more symbolic,
+                    mystical view of this dream.
+                  </p>
+                )}
+              </section>
+            </div>
+          </div>
         )}
-
-        <section className="p-4 rounded-md bg-slate-800 mb-4">
-          <h2 className="text-xl font-semibold mb-2">
-            Psychological interpretation
-          </h2>
-          {psychText ? (
-            <p className="text-slate-100 whitespace-pre-line">
-              {psychText}
-            </p>
-          ) : (
-            <p className="text-slate-400 text-sm">
-              Click "Generate interpretation" to see a psychology based view of
-              this dream.
-            </p>
-          )}
-        </section>
-
-        <section className="p-4 rounded-md bg-slate-800 mb-4">
-          <h2 className="text-xl font-semibold mb-2">
-            Mystical interpretation
-          </h2>
-          {mysticText ? (
-            <p className="text-slate-100 whitespace-pre-line">
-              {mysticText}
-            </p>
-          ) : (
-            <p className="text-slate-400 text-sm">
-              Click "Generate interpretation" to see a more symbolic, mystical
-              view of this dream.
-            </p>
-          )}
-        </section>
-
-        <section className="p-4 rounded-md bg-slate-800 mb-4">
-          <h2 className="text-xl font-semibold mb-3">Key symbols</h2>
-          {symbols.length === 0 ? (
-            <p className="text-slate-400 text-sm">
-              No symbols extracted yet. Generate an interpretation to see them.
-            </p>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {symbols.map((symbol, idx) => (
-                <span
-                  key={idx}
-                  className="inline-flex items-center px-3 py-1 rounded-full bg-slate-700 text-xs text-slate-100"
-                >
-                  {symbol}
-                </span>
-              ))}
-            </div>
-          )}
-        </section>
-
-        <section className="p-4 rounded-md bg-slate-800">
-          <h2 className="text-xl font-semibold mb-3">Themes</h2>
-          {themes.length === 0 ? (
-            <p className="text-slate-400 text-sm">
-              No themes extracted yet. Generate an interpretation to see them.
-            </p>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {themes.map((theme, idx) => (
-                <span
-                  key={idx}
-                  className="inline-flex items-center px-3 py-1 rounded-full bg-slate-700 text-xs text-slate-100"
-                >
-                  {theme}
-                </span>
-              ))}
-            </div>
-          )}
-        </section>
       </div>
     </main>
   );

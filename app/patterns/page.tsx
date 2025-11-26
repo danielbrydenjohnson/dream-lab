@@ -199,7 +199,6 @@ export default function PatternsPage() {
     try {
       setLoadingClusters(true);
 
-      // Limit the number of symbols sent to keep prompts compact.
       const topSymbolsForApi = symbolCounts.slice(0, 30);
 
       const res = await fetch("/api/cluster-symbols", {
@@ -226,19 +225,33 @@ export default function PatternsPage() {
 
   if (authChecked && !userId) {
     return (
-      <main className="min-h-screen bg-slate-950 text-white">
-        <div className="max-w-3xl mx-auto px-4 py-6">
+      <main className="min-h-screen bg-slate-950 text-white relative overflow-hidden">
+        {/* Background glow */}
+        <div
+          className="pointer-events-none absolute inset-0 opacity-60"
+          aria-hidden="true"
+        >
+          <div className="absolute -top-40 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-indigo-600/40 blur-3xl" />
+          <div className="absolute bottom-[-120px] right-[-60px] h-72 w-72 rounded-full bg-sky-500/30 blur-3xl" />
+        </div>
+
+        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
           <TopNav />
-          <div className="mt-8 text-center space-y-4">
-            <p className="text-lg">
-              You need to be logged in to see your dream patterns.
-            </p>
-            <Link
-              href="/login"
-              className="px-4 py-2 rounded-md bg-indigo-500 hover:bg-indigo-600 text-white font-medium"
-            >
-              Go to login
-            </Link>
+          <div className="mt-16 flex flex-col items-center text-center">
+            <div className="max-w-md rounded-2xl border border-white/10 bg-slate-950/80 backdrop-blur-md p-6 shadow-xl shadow-black/40">
+              <h1 className="text-2xl font-semibold mb-3">
+                Sign in to see your patterns
+              </h1>
+              <p className="text-sm text-slate-300 mb-5">
+                You need to be logged in to see your dream patterns.
+              </p>
+              <Link
+                href="/login"
+                className="inline-flex items-center justify-center px-5 py-2.5 rounded-full bg-indigo-500 hover:bg-indigo-600 text-sm font-medium text-white shadow-md shadow-indigo-500/40 transition transform hover:-translate-y-0.5"
+              >
+                Go to login
+              </Link>
+            </div>
           </div>
         </div>
       </main>
@@ -247,37 +260,54 @@ export default function PatternsPage() {
 
   const visibleSymbolCounts = showAllSymbols
     ? symbolCounts
-    : symbolCounts.slice(0, 5);
+    : symbolCounts.slice(0, 6);
 
   const visibleThemeCounts = showAllThemes
     ? themeCounts
-    : themeCounts.slice(0, 5);
+    : themeCounts.slice(0, 6);
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white">
-      <div className="max-w-3xl mx-auto px-4 py-6">
+    <main className="min-h-screen bg-slate-950 text-white relative overflow-hidden">
+      {/* Background glow */}
+      <div
+        className="pointer-events-none absolute inset-0 opacity-60"
+        aria-hidden="true"
+      >
+        <div className="absolute -top-40 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-indigo-600/40 blur-3xl" />
+        <div className="absolute bottom-[-120px] right-[-60px] h-72 w-72 rounded-full bg-sky-500/30 blur-3xl" />
+      </div>
+
+      <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
         <TopNav />
 
-        <div className="mb-4 flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Dream patterns</h1>
+        {/* Header */}
+        <div className="mt-4 mb-6">
+          <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight mb-1">
+            Dream patterns
+          </h1>
+          <p className="text-sm text-slate-400">
+            Symbols, themes, and clusters that keep showing up across your
+            dreams.
+          </p>
         </div>
 
-        <section className="mb-6 p-4 rounded-md bg-slate-900 border border-slate-800">
+        {/* Summary / empty state */}
+        <section className="mb-6 rounded-2xl border border-white/10 bg-slate-950/80 backdrop-blur-md p-5 shadow-lg shadow-black/40">
           {loadingDreams ? (
-            <p className="text-slate-400">Loading your dreams...</p>
+            <p className="text-slate-300 text-sm">Loading your dreams...</p>
           ) : totalDreams === 0 ? (
             <div>
-              <p className="text-slate-200 mb-2">
+              <p className="text-slate-100 mb-2">
                 You have not logged any dreams yet.
               </p>
               <p className="text-slate-400 text-sm mb-4">
                 Start recording your dreams regularly. As your archive grows,
                 you will see recurring symbols, themes, and storylines. That is
-                when this analysis page becomes useful.
+                when this page becomes useful.
               </p>
               <Link
                 href="/dreams/new"
-                className="inline-block px-4 py-2 rounded-md bg-indigo-500 hover:bg-indigo-600 text-white font-medium"
+                className="inline-flex items-center justify-center px-4 py-2.5 rounded-full bg-indigo-500 hover:bg-indigo-600 text-sm font-medium text-white shadow-md shadow-indigo-500/30 transition"
               >
                 Write your first dream
               </Link>
@@ -298,14 +328,20 @@ export default function PatternsPage() {
 
         {totalDreams > 0 && (
           <>
-            {/* Symbol clusters section */}
-            <section className="mb-6 p-4 rounded-md bg-slate-900 border border-slate-800">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-xl font-semibold">Symbol clusters</h2>
+            {/* Clusters */}
+            <section className="mb-6 rounded-2xl border border-white/10 bg-slate-950/80 backdrop-blur-md p-5 shadow-lg shadow-black/40">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-3">
+                <div>
+                  <h2 className="text-lg font-semibold">Symbol clusters</h2>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Group your recurring symbols into broader psychological or
+                    mythic domains.
+                  </p>
+                </div>
                 <button
                   onClick={handleClusterSymbols}
                   disabled={loadingClusters || symbolCounts.length === 0}
-                  className="px-4 py-2 rounded-md bg-indigo-500 hover:bg-indigo-600 disabled:opacity-60 disabled:cursor-not-allowed text-sm font-medium"
+                  className="inline-flex items-center justify-center px-4 py-2.5 rounded-full bg-indigo-500 hover:bg-indigo-600 disabled:opacity-60 disabled:cursor-not-allowed text-xs sm:text-sm font-medium text-white shadow-md shadow-indigo-500/30 transition"
                 >
                   {loadingClusters ? "Clustering..." : "Build clusters"}
                 </button>
@@ -320,13 +356,13 @@ export default function PatternsPage() {
                   {clusters.map((cluster, idx) => (
                     <div
                       key={idx}
-                      className="border border-slate-800 rounded-md p-3 bg-slate-950"
+                      className="rounded-2xl border border-white/10 bg-slate-950/90 p-4 shadow-inner shadow-black/40"
                     >
-                      <div className="flex items-center justify-between mb-1">
-                        <h3 className="text-sm font-semibold text-slate-100">
+                      <div className="flex items-center justify-between gap-3 mb-1.5">
+                        <h3 className="text-sm font-semibold text-slate-50">
                           {cluster.label}
                         </h3>
-                        <span className="text-xs text-slate-500">
+                        <span className="text-[11px] text-slate-400">
                           {cluster.totalCount} symbol occurrence
                           {cluster.totalCount === 1 ? "" : "s"}
                         </span>
@@ -341,7 +377,7 @@ export default function PatternsPage() {
                           {cluster.items.map((item, i) => (
                             <span
                               key={i}
-                              className="px-2 py-0.5 rounded-full bg-slate-800 text-[10px] text-slate-200"
+                              className="px-3 py-1 rounded-full bg-slate-800 text-[11px] text-slate-100 border border-white/10"
                             >
                               {item}
                             </span>
@@ -360,87 +396,95 @@ export default function PatternsPage() {
               ) : null}
             </section>
 
+            {/* Symbols and themes side by side */}
             <section className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="p-4 rounded-md bg-slate-900 border border-slate-800">
-                <div className="flex items-center justify-between mb-2">
-                  <h2 className="text-xl font-semibold">Top symbols</h2>
-                  {symbolCounts.length > 5 && (
+              <div className="rounded-2xl border border-white/10 bg-slate-950/80 backdrop-blur-md p-4 sm:p-5 shadow-lg shadow-black/40">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-lg font-semibold">Top symbols</h2>
+                  {symbolCounts.length > 6 && (
                     <button
                       onClick={() => setShowAllSymbols((v) => !v)}
-                      className="text-xs text-indigo-400 hover:text-indigo-300"
+                      className="text-[11px] px-3 py-1 rounded-full border border-indigo-400/60 text-indigo-300 hover:bg-indigo-500/10 transition"
                     >
                       {showAllSymbols ? "Show top only" : "Show all"}
                     </button>
                   )}
                 </div>
+
                 {symbolCounts.length === 0 ? (
                   <p className="text-slate-400 text-sm">
                     No symbols have been extracted yet. Generate interpretations
                     for your dreams to start building this list.
                   </p>
                 ) : (
-                  <ul className="space-y-1 text-sm">
+                  <div className="flex flex-wrap gap-2">
                     {visibleSymbolCounts.map((item) => (
-                      <li
+                      <span
                         key={item.value}
-                        className="flex items-center justify-between"
+                        className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-slate-900 text-[11px] text-slate-100 border border-white/10"
                       >
-                        <span className="text-slate-100">{item.value}</span>
+                        <span>{item.value}</span>
                         <span className="text-slate-400">
-                          {item.count} dream
-                          {item.count === 1 ? "" : "s"}
+                          {item.count}×
                         </span>
-                      </li>
+                      </span>
                     ))}
-                  </ul>
+                  </div>
                 )}
               </div>
 
-              <div className="p-4 rounded-md bg-slate-900 border border-slate-800">
-                <div className="flex items-center justify-between mb-2">
-                  <h2 className="text-xl font-semibold">Top themes</h2>
-                  {themeCounts.length > 5 && (
+              <div className="rounded-2xl border border-white/10 bg-slate-950/80 backdrop-blur-md p-4 sm:p-5 shadow-lg shadow-black/40">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-lg font-semibold">Top themes</h2>
+                  {themeCounts.length > 6 && (
                     <button
                       onClick={() => setShowAllThemes((v) => !v)}
-                      className="text-xs text-indigo-400 hover:text-indigo-300"
+                      className="text-[11px] px-3 py-1 rounded-full border border-indigo-400/60 text-indigo-300 hover:bg-indigo-500/10 transition"
                     >
                       {showAllThemes ? "Show top only" : "Show all"}
                     </button>
                   )}
                 </div>
+
                 {themeCounts.length === 0 ? (
                   <p className="text-slate-400 text-sm">
                     No themes have been extracted yet. Generate interpretations
                     for your dreams to start building this list.
                   </p>
                 ) : (
-                  <ul className="space-y-1 text-sm">
+                  <div className="flex flex-wrap gap-2">
                     {visibleThemeCounts.map((item) => (
-                      <li
+                      <span
                         key={item.value}
-                        className="flex items-center justify-between"
+                        className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-slate-900 text-[11px] text-slate-100 border border-white/10"
                       >
-                        <span className="text-slate-100">{item.value}</span>
+                        <span>{item.value}</span>
                         <span className="text-slate-400">
-                          {item.count} dream
-                          {item.count === 1 ? "" : "s"}
+                          {item.count}×
                         </span>
-                      </li>
+                      </span>
                     ))}
-                  </ul>
+                  </div>
                 )}
               </div>
             </section>
 
-            <section className="mb-6 p-4 rounded-md bg-slate-900 border border-slate-800">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-xl font-semibold">
-                  AI overview of your dream patterns
-                </h2>
+            {/* AI overview */}
+            <section className="mb-6 rounded-2xl border border-white/10 bg-slate-950/80 backdrop-blur-md p-5 shadow-lg shadow-black/40">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-3">
+                <div>
+                  <h2 className="text-lg font-semibold">
+                    AI overview of your dream patterns
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-1">
+                    A narrative summary of how your symbols, themes, and story
+                    arcs connect.
+                  </p>
+                </div>
                 <button
                   onClick={handleAnalysePatterns}
                   disabled={analysing || totalDreams === 0}
-                  className="px-4 py-2 rounded-md bg-indigo-500 hover:bg-indigo-600 disabled:opacity-60 disabled:cursor-not-allowed text-sm font-medium"
+                  className="inline-flex items-center justify-center px-4 py-2.5 rounded-full bg-indigo-500 hover:bg-indigo-600 disabled:opacity-60 disabled:cursor-not-allowed text-xs sm:text-sm font-medium text-white shadow-md shadow-indigo-500/30 transition"
                 >
                   {analysing ? "Analysing..." : "Analyse patterns"}
                 </button>
@@ -451,7 +495,7 @@ export default function PatternsPage() {
               )}
 
               {analysis ? (
-                <p className="text-sm text-slate-100 whitespace-pre-line">
+                <p className="text-sm text-slate-100 whitespace-pre-line leading-relaxed">
                   {analysis}
                 </p>
               ) : !analysing ? (
@@ -464,23 +508,24 @@ export default function PatternsPage() {
               ) : null}
             </section>
 
-            <section className="p-4 rounded-md bg-slate-900 border border-slate-800">
-              <h2 className="text-xl font-semibold mb-3">
+            {/* Recent dreams list */}
+            <section className="rounded-2xl border border-white/10 bg-slate-950/80 backdrop-blur-md p-5 shadow-lg shadow-black/40">
+              <h2 className="text-lg font-semibold mb-3">
                 Recent dreams used in this analysis
               </h2>
               <ul className="space-y-3 text-sm">
                 {dreams.slice(0, 10).map((dream) => (
                   <li
                     key={dream.id}
-                    className="border border-slate-800 rounded-md p-3 bg-slate-950"
+                    className="rounded-2xl border border-white/10 bg-slate-950/90 p-3 shadow-inner shadow-black/40"
                   >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-slate-300 text-xs">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[11px] text-slate-400">
                         {formatDate(dream.createdAt)}
                       </span>
                       <Link
                         href={`/dreams/${dream.id}`}
-                        className="text-xs text-indigo-400 hover:text-indigo-300"
+                        className="text-[11px] text-indigo-300 hover:text-indigo-200"
                       >
                         View dream
                       </Link>
@@ -488,24 +533,39 @@ export default function PatternsPage() {
                     <p className="text-slate-100 line-clamp-2 mb-2">
                       {dream.rawText}
                     </p>
+
                     <div className="flex flex-wrap gap-2">
+                      {(dream.symbols ?? []).slice(0, 4).length > 0 && (
+                        <span className="text-[11px] text-slate-400 mr-1">
+                          Symbols:
+                        </span>
+                      )}
                       {(dream.symbols ?? []).slice(0, 4).map((symbol, idx) => (
                         <span
                           key={`sym-${idx}`}
-                          className="px-2 py-0.5 rounded-full bg-slate-800 text-[10px] text-slate-200"
+                          className="px-2 py-0.5 rounded-full bg-slate-900 text-[10px] text-slate-100 border border-white/10"
                         >
                           {symbol}
                         </span>
                       ))}
-                      {(dream.themes ?? []).slice(0, 4).map((theme, idx) => (
-                        <span
-                          key={`theme-${idx}`}
-                          className="px-2 py-0.5 rounded-full bg-slate-800 text-[10px] text-slate-200"
-                        >
-                          {theme}
-                        </span>
-                      ))}
                     </div>
+                    {(dream.themes ?? []).slice(0, 4).length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <span className="text-[11px] text-slate-400 mr-1">
+                          Themes:
+                        </span>
+                        {(dream.themes ?? [])
+                          .slice(0, 4)
+                          .map((theme, idx) => (
+                            <span
+                              key={`theme-${idx}`}
+                              className="px-2 py-0.5 rounded-full bg-slate-900 text-[10px] text-slate-100 border border-white/10"
+                            >
+                              {theme}
+                            </span>
+                          ))}
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>

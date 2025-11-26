@@ -73,17 +73,33 @@ export default function NewDreamPage() {
 
   if (authChecked && !userId) {
     return (
-      <main className="min-h-screen bg-slate-950 text-white">
-        <div className="max-w-2xl mx-auto px-4 py-6">
+      <main className="min-h-screen bg-slate-950 text-white relative overflow-hidden">
+        {/* Background glow */}
+        <div
+          className="pointer-events-none absolute inset-0 opacity-60"
+          aria-hidden="true"
+        >
+          <div className="absolute -top-40 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-indigo-600/40 blur-3xl" />
+          <div className="absolute bottom-[-120px] right-[-60px] h-72 w-72 rounded-full bg-sky-500/30 blur-3xl" />
+        </div>
+
+        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
           <TopNav />
-          <div className="mt-8 text-center">
-            <p className="mb-4">You need to be logged in to write dreams.</p>
-            <Link
-              href="/login"
-              className="px-4 py-2 rounded-md bg-indigo-500 hover:bg-indigo-600 text-white font-medium"
-            >
-              Go to login
-            </Link>
+          <div className="mt-16 flex flex-col items-center text-center">
+            <div className="max-w-md rounded-2xl border border-white/10 bg-slate-950/80 backdrop-blur-md p-6 shadow-xl shadow-black/40">
+              <h1 className="text-2xl font-semibold mb-3">
+                You need to log in
+              </h1>
+              <p className="text-sm text-slate-300 mb-5">
+                You need to be logged in to write and save dreams.
+              </p>
+              <Link
+                href="/login"
+                className="inline-flex items-center justify-center px-5 py-2.5 rounded-full bg-indigo-500 hover:bg-indigo-600 text-sm font-medium text-white shadow-md shadow-indigo-500/40 transition transform hover:-translate-y-0.5"
+              >
+                Go to login
+              </Link>
+            </div>
           </div>
         </div>
       </main>
@@ -91,63 +107,95 @@ export default function NewDreamPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white">
-      <div className="max-w-2xl mx-auto px-4 py-6">
+    <main className="min-h-screen bg-slate-950 text-white relative overflow-hidden">
+      {/* Background glow */}
+      <div
+        className="pointer-events-none absolute inset-0 opacity-60"
+        aria-hidden="true"
+      >
+        <div className="absolute -top-40 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-indigo-600/40 blur-3xl" />
+        <div className="absolute bottom-[-120px] right-[-60px] h-72 w-72 rounded-full bg-sky-500/30 blur-3xl" />
+      </div>
+
+      <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
         <TopNav />
 
-        <div className="mb-4 flex items-center justify-between">
+        {/* Breadcrumb */}
+        <div className="mt-3 mb-4 flex items-center justify-between">
           <Link
             href="/dreams"
-            className="text-sm text-slate-300 hover:text-white"
+            className="inline-flex items-center text-xs sm:text-sm text-slate-300 hover:text-white"
           >
-            ← Back to dreams
+            <span className="mr-1 text-slate-400">{"←"}</span>
+            Back to dreams
           </Link>
         </div>
 
-        <h1 className="text-3xl font-bold mb-4">Write a new dream</h1>
-
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div>
-            <label className="block text-sm text-slate-300 mb-1">
-              Title <span className="text-red-400">*</span>
-            </label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full p-3 rounded-md bg-slate-800 text-white placeholder-slate-500 focus:outline-none"
-              placeholder="For example: The collapsing staircase, The ocean of mirrors..."
-            />
-            <p className="text-xs text-slate-500 mt-1">
-              Title is required. It helps you and the AI refer back to this
-              dream later.
+        {/* Card */}
+        <section className="rounded-2xl border border-white/10 bg-slate-950/80 backdrop-blur-md p-5 sm:p-6 shadow-lg shadow-black/40">
+          <header className="mb-4 sm:mb-6">
+            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight mb-1">
+              Write a new dream
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-400">
+              Capture as much detail as you can while it is still fresh. The AI
+              will use this text for interpretations and pattern analysis.
             </p>
-          </div>
+          </header>
 
-          <div>
-            <label className="block text-sm text-slate-300 mb-1">
-              Dream text <span className="text-red-400">*</span>
-            </label>
-            <textarea
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              className="w-full h-56 p-4 rounded-md bg-slate-800 text-white placeholder-slate-400 focus:outline-none"
-              placeholder="Write your dream as you remember it..."
-            />
-          </div>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4 sm:gap-5">
+            <div>
+              <label className="block text-xs uppercase tracking-[0.18em] text-slate-400 mb-1.5">
+                Title <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full rounded-xl border border-white/10 bg-slate-900/80 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/70 focus:border-indigo-400 shadow-inner shadow-black/40"
+                placeholder="For example: The collapsing staircase, The ocean of mirrors..."
+              />
+              <p className="text-[11px] text-slate-500 mt-1.5">
+                Title helps you and the AI refer back to this dream later.
+              </p>
+            </div>
 
-          {errorMessage && (
-            <p className="text-sm text-red-400">{errorMessage}</p>
-          )}
+            <div>
+              <label className="block text-xs uppercase tracking-[0.18em] text-slate-400 mb-1.5">
+                Dream text <span className="text-red-400">*</span>
+              </label>
+              <textarea
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                className="w-full h-64 sm:h-72 rounded-xl border border-white/10 bg-slate-900/80 px-3 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/70 focus:border-indigo-400 shadow-inner shadow-black/40 resize-vertical"
+                placeholder="Write the dream as you remember it. Include places, people, emotions, and any strange details."
+              />
+              <p className="text-[11px] text-slate-500 mt-1.5">
+                Do not worry about perfect grammar. Honest detail is more
+                useful than polished wording.
+              </p>
+            </div>
 
-          <button
-            type="submit"
-            disabled={saving}
-            className="px-4 py-2 rounded-md bg-indigo-500 hover:bg-indigo-600 disabled:bg-slate-700 text-white font-medium"
-          >
-            {saving ? "Saving..." : "Save dream"}
-          </button>
-        </form>
+            {errorMessage && (
+              <div className="rounded-xl border border-red-500/60 bg-red-950/60 px-3 py-2 text-xs text-red-200">
+                {errorMessage}
+              </div>
+            )}
+
+            <div className="mt-1 flex items-center justify-between gap-3">
+              <p className="text-[11px] text-slate-500">
+                You can generate interpretations after saving this dream.
+              </p>
+              <button
+                type="submit"
+                disabled={saving}
+                className="inline-flex items-center justify-center px-4 py-2.5 rounded-full bg-indigo-500 hover:bg-indigo-600 disabled:bg-slate-700 text-xs sm:text-sm font-medium text-white shadow-md shadow-indigo-500/30 transition transform hover:-translate-y-0.5"
+              >
+                {saving ? "Saving..." : "Save dream"}
+              </button>
+            </div>
+          </form>
+        </section>
       </div>
     </main>
   );
