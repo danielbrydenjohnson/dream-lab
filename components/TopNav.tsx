@@ -27,19 +27,21 @@ export default function TopNav() {
       return "text-sm font-medium text-white px-3 py-1.5 rounded-full bg-white/10 shadow-sm";
     }
 
-    return "text-sm font-medium text-slate-200/80 hover:text-white px-3 py-1.5 rounded-full hover:bg-white/5 transition";
+    return "text-sm font-medium text-slate-200/80 hover:text-white px-3 py-1.5 rounded-full hover:bg:white/5 transition";
   }
 
   return (
     <header className="mb-6">
-      <nav className="
+      <nav
+        className="
         flex items-center justify-between 
         px-4 py-3 
         rounded-full 
         bg-slate-950/50 
         backdrop-blur-xl 
         shadow-lg shadow-black/40
-      ">
+      "
+      >
         {/* Logo and branding */}
         <Link href="/" className="flex items-center gap-2">
           <div className="h-7 w-7 rounded-full bg-gradient-to-tr from-indigo-500 via-sky-400 to-violet-500 shadow-md shadow-indigo-500/40" />
@@ -58,6 +60,9 @@ export default function TopNav() {
           <div className="flex items-center gap-2">
             <Link href="/dreams" className={linkClass("/dreams")}>
               Dreams
+            </Link>
+            <Link href="/calendar" className={linkClass("/calendar")}>
+              Calendar
             </Link>
             <Link href="/patterns" className={linkClass("/patterns")}>
               Patterns
