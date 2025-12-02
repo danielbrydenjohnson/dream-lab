@@ -90,7 +90,7 @@ export default function RegisterPage() {
       try {
         await sendEmailVerification(cred.user);
         setInfoMessage(
-          "Welcome to Onyva. Check your email to verify your account and complete setup."
+          "Welcome to Onyva. Check your email to verify your account and complete setup. If it is not in your inbox, check your spam folder."
         );
       } catch (err) {
         console.error("Error sending verification email:", err);
