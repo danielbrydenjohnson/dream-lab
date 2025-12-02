@@ -8,6 +8,9 @@ import {
   where,
   orderBy,
   onSnapshot,
+  doc,
+  getDoc,
+  setDoc,
 } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { db } from "@/lib/firebase";
@@ -28,29 +31,20 @@ type CountItem = {
   count: number;
 };
 
-type SymbolCluster = {
-  label: string;
-  description: string;
-  totalCount: number;
-  items: string[];
-};
-
 export default function PatternsPage() {
   const [dreams, setDreams] = useState<Dream[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [loadingDreams, setLoadingDreams] = useState(true);
 
+  // Cached analysis
   const [analysis, setAnalysis] = useState<string | null>(null);
+  const [lastAnalysedAt, setLastAnalysedAt] = useState<string | null>(null);
   const [analysing, setAnalysing] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
 
   const [showAllSymbols, setShowAllSymbols] = useState(false);
   const [showAllThemes, setShowAllThemes] = useState(false);
-
-  const [clusters, setClusters] = useState<SymbolCluster[] | null>(null);
-  const [loadingClusters, setLoadingClusters] = useState(false);
-  const [clusterError, setClusterError] = useState<string | null>(null);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
@@ -60,6 +54,7 @@ export default function PatternsPage() {
     return () => unsub();
   }, []);
 
+  // Load dreams
   useEffect(() => {
     if (!userId) {
       setDreams([]);
@@ -79,9 +74,9 @@ export default function PatternsPage() {
     const unsub = onSnapshot(
       q,
       (snapshot) => {
-        const items = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...(doc.data() as Omit<Dream, "id">),
+        const items = snapshot.docs.map((docSnap) => ({
+          id: docSnap.id,
+          ...(docSnap.data() as Omit<Dream, "id">),
         }));
         setDreams(items);
         setLoadingDreams(false);
@@ -94,6 +89,34 @@ export default function PatternsPage() {
     );
 
     return () => unsub();
+  }, [userId]);
+
+  // Load last saved analysis for this user
+  useEffect(() => {
+    if (!userId) {
+      setAnalysis(null);
+      setLastAnalysedAt(null);
+      return;
+    }
+
+    async function loadAnalysis() {
+      try {
+        const ref = doc(db, "patternAnalyses", userId);
+        const snap = await getDoc(ref);
+        if (snap.exists()) {
+          const data = snap.data() as any;
+          setAnalysis(data.analysis ?? null);
+          setLastAnalysedAt(data.createdAt ?? null);
+        } else {
+          setAnalysis(null);
+          setLastAnalysedAt(null);
+        }
+      } catch (error) {
+        console.error("Error loading saved pattern analysis:", error);
+      }
+    }
+
+    loadAnalysis();
   }, [userId]);
 
   const totalDreams = dreams.length;
@@ -141,14 +164,44 @@ export default function PatternsPage() {
     return String(value);
   }
 
+  function formatLastAnalysedLabel(createdAtIso: string | null) {
+    if (!createdAtIso) return null;
+
+    const date = new Date(createdAtIso);
+    if (Number.isNaN(date.getTime())) return null;
+
+    const diffMs = Date.now() - date.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays <= 0) return "Last analysed today";
+    if (diffDays === 1) return "Last analysed 1 day ago";
+    return `Last analysed ${diffDays} days ago`;
+  }
+
   async function handleAnalysePatterns() {
     setAnalysisError(null);
-    setAnalysis(null);
 
     if (totalDreams < 3) {
       setAnalysis(
         "You have only logged a few dreams so far. That is a good start, but patterns are still forming. Keep recording your dreams regularly and rerun this analysis once you have a richer history."
       );
+      setLastAnalysedAt(new Date().toISOString());
+      // Optionally still save this lightweight message to Firestore
+      if (userId) {
+        try {
+          await setDoc(doc(db, "patternAnalyses", userId), {
+            userId,
+            createdAt: new Date().toISOString(),
+            totalDreamsAtAnalysis: totalDreams,
+            symbolCountsSnapshot: symbolCounts,
+            themeCountsSnapshot: themeCounts,
+            analysis:
+              "You have only logged a few dreams so far. That is a good start, but patterns are still forming. Keep recording your dreams regularly and rerun this analysis once you have a richer history.",
+          });
+        } catch (error) {
+          console.error("Error saving minimal pattern analysis:", error);
+        }
+      }
       return;
     }
 
@@ -176,50 +229,33 @@ export default function PatternsPage() {
       }
 
       const data = await res.json();
-      setAnalysis(data.analysis ?? "No analysis returned.");
+      const text = data.analysis ?? "No analysis returned.";
+
+      // Update local state
+      setAnalysis(text);
+      const nowIso = new Date().toISOString();
+      setLastAnalysedAt(nowIso);
+
+      // Persist to Firestore so it is available next time
+      if (userId) {
+        try {
+          await setDoc(doc(db, "patternAnalyses", userId), {
+            userId,
+            createdAt: nowIso,
+            totalDreamsAtAnalysis: totalDreams,
+            symbolCountsSnapshot: symbolCounts,
+            themeCountsSnapshot: themeCounts,
+            analysis: text,
+          });
+        } catch (error) {
+          console.error("Error saving pattern analysis:", error);
+        }
+      }
     } catch (error) {
       console.error("Error analysing patterns:", error);
       setAnalysisError("Failed to analyse patterns. Try again later.");
     } finally {
       setAnalysing(false);
-    }
-  }
-
-  async function handleClusterSymbols() {
-    setClusterError(null);
-    setClusters(null);
-
-    if (symbolCounts.length < 3) {
-      setClusterError(
-        "You need a few more recurring symbols before clustering becomes useful. Generate more interpretations and try again."
-      );
-      return;
-    }
-
-    try {
-      setLoadingClusters(true);
-
-      const topSymbolsForApi = symbolCounts.slice(0, 30);
-
-      const res = await fetch("/api/cluster-symbols", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          symbols: topSymbolsForApi,
-        }),
-      });
-
-      if (!res.ok) {
-        throw new Error(`API error: ${res.status}`);
-      }
-
-      const data = await res.json();
-      setClusters(data.clusters ?? []);
-    } catch (error) {
-      console.error("Error clustering symbols:", error);
-      setClusterError("Failed to build clusters. Try again later.");
-    } finally {
-      setLoadingClusters(false);
     }
   }
 
@@ -266,6 +302,8 @@ export default function PatternsPage() {
     ? themeCounts
     : themeCounts.slice(0, 6);
 
+  const lastAnalysedLabel = formatLastAnalysedLabel(lastAnalysedAt);
+
   return (
     <main className="min-h-screen bg-slate-950 text-white relative overflow-hidden">
       {/* Background glow */}
@@ -286,8 +324,7 @@ export default function PatternsPage() {
             Dream patterns
           </h1>
           <p className="text-sm text-slate-400">
-            Symbols, themes, and clusters that keep showing up across your
-            dreams.
+            Symbols and themes that keep showing up across your dreams.
           </p>
         </div>
 
@@ -313,7 +350,7 @@ export default function PatternsPage() {
               </Link>
             </div>
           ) : (
-            <div>
+            <div className="space-y-1">
               <p className="text-lg font-semibold mb-1">
                 You have logged {totalDreams} dream
                 {totalDreams === 1 ? "" : "s"}.
@@ -322,80 +359,17 @@ export default function PatternsPage() {
                 Each dream adds more data to your personal dream map. The more
                 you record, the clearer the recurring symbols and themes become.
               </p>
+              {lastAnalysedLabel && (
+                <p className="text-xs text-slate-500 mt-1">
+                  {lastAnalysedLabel}
+                </p>
+              )}
             </div>
           )}
         </section>
 
         {totalDreams > 0 && (
           <>
-            {/* Clusters */}
-            <section className="mb-6 rounded-2xl border border-white/10 bg-slate-950/80 backdrop-blur-md p-5 shadow-lg shadow-black/40">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-3">
-                <div>
-                  <h2 className="text-lg font-semibold">Symbol clusters</h2>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Group your recurring symbols into broader psychological or
-                    mythic domains.
-                  </p>
-                </div>
-                <button
-                  onClick={handleClusterSymbols}
-                  disabled={loadingClusters || symbolCounts.length === 0}
-                  className="inline-flex items-center justify-center px-4 py-2.5 rounded-full bg-indigo-500 hover:bg-indigo-600 disabled:opacity-60 disabled:cursor-not-allowed text-xs sm:text-sm font-medium text-white shadow-md shadow-indigo-500/30 transition"
-                >
-                  {loadingClusters ? "Clustering..." : "Build clusters"}
-                </button>
-              </div>
-
-              {clusterError && (
-                <p className="text-sm text-red-400 mb-2">{clusterError}</p>
-              )}
-
-              {clusters && clusters.length > 0 ? (
-                <div className="space-y-3">
-                  {clusters.map((cluster, idx) => (
-                    <div
-                      key={idx}
-                      className="rounded-2xl border border-white/10 bg-slate-950/90 p-4 shadow-inner shadow-black/40"
-                    >
-                      <div className="flex items-center justify-between gap-3 mb-1.5">
-                        <h3 className="text-sm font-semibold text-slate-50">
-                          {cluster.label}
-                        </h3>
-                        <span className="text-[11px] text-slate-400">
-                          {cluster.totalCount} symbol occurrence
-                          {cluster.totalCount === 1 ? "" : "s"}
-                        </span>
-                      </div>
-                      {cluster.description && (
-                        <p className="text-xs text-slate-300 mb-2">
-                          {cluster.description}
-                        </p>
-                      )}
-                      {cluster.items && cluster.items.length > 0 && (
-                        <div className="flex flex-wrap gap-2">
-                          {cluster.items.map((item, i) => (
-                            <span
-                              key={i}
-                              className="px-3 py-1 rounded-full bg-slate-800 text-[11px] text-slate-100 border border-white/10"
-                            >
-                              {item}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : !loadingClusters ? (
-                <p className="text-sm text-slate-400">
-                  Use clustering to see how your recurring symbols group into a
-                  smaller number of meaningful domains. This becomes more useful
-                  as you log more dreams and extract more symbols.
-                </p>
-              ) : null}
-            </section>
-
             {/* Symbols and themes side by side */}
             <section className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="rounded-2xl border border-white/10 bg-slate-950/80 backdrop-blur-md p-4 sm:p-5 shadow-lg shadow-black/40">
@@ -480,13 +454,22 @@ export default function PatternsPage() {
                     A narrative summary of how your symbols, themes, and story
                     arcs connect.
                   </p>
+                  {lastAnalysedLabel && (
+                    <p className="text-[11px] text-slate-500 mt-1">
+                      {lastAnalysedLabel}
+                    </p>
+                  )}
                 </div>
                 <button
                   onClick={handleAnalysePatterns}
                   disabled={analysing || totalDreams === 0}
                   className="inline-flex items-center justify-center px-4 py-2.5 rounded-full bg-indigo-500 hover:bg-indigo-600 disabled:opacity-60 disabled:cursor-not-allowed text-xs sm:text-sm font-medium text-white shadow-md shadow-indigo-500/30 transition"
                 >
-                  {analysing ? "Analysing..." : "Analyse patterns"}
+                  {analysing
+                    ? "Analysing..."
+                    : analysis
+                    ? "Re analyse patterns"
+                    : "Analyse patterns"}
                 </button>
               </div>
 
