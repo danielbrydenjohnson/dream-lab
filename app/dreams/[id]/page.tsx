@@ -192,6 +192,12 @@ export default function DreamDetailPage() {
     }
   }
 
+  const alreadyInterpreted =
+    Boolean(psychText && psychText.trim()) ||
+    Boolean(mysticText && mysticText.trim()) ||
+    (symbols && symbols.length > 0) ||
+    (themes && themes.length > 0);
+
   const isStillLoading =
     loading || !authChecked || (dream && isOwner === null);
 
@@ -290,10 +296,14 @@ export default function DreamDetailPage() {
 
                 <button
                   onClick={handleInterpretation}
-                  disabled={interpreting}
+                  disabled={interpreting || alreadyInterpreted}
                   className="inline-flex items-center justify-center px-3 py-1.5 rounded-full bg-indigo-500 hover:bg-indigo-600 disabled:bg-slate-700 text-xs sm:text-sm font-medium text-white shadow-md shadow-indigo-500/30 transition"
                 >
-                  {interpreting ? "Interpreting..." : "Generate interpretation"}
+                  {interpreting
+                    ? "Interpreting..."
+                    : alreadyInterpreted
+                    ? "Already interpreted"
+                    : "Generate interpretation"}
                 </button>
 
                 <button
@@ -303,6 +313,13 @@ export default function DreamDetailPage() {
                 >
                   {deleting ? "Deleting..." : "Delete"}
                 </button>
+
+                {alreadyInterpreted && (
+                  <p className="w-full text-[11px] text-slate-400 mt-1">
+                    This dream has already been interpreted. Interpretations are
+                    generated once per dream.
+                  </p>
+                )}
               </div>
             </div>
 

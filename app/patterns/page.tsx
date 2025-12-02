@@ -182,6 +182,29 @@ export default function PatternsPage() {
   async function handleAnalysePatterns() {
     setAnalysisError(null);
 
+    // Enforce one analysis every 30 days
+    if (lastAnalysedAt) {
+      const last = new Date(lastAnalysedAt);
+      if (!Number.isNaN(last.getTime())) {
+        const diffMs = Date.now() - last.getTime();
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+        if (diffDays < 30) {
+          const when =
+            diffDays <= 0
+              ? "today"
+              : diffDays === 1
+              ? "1 day ago"
+              : `${diffDays} days ago`;
+
+          setAnalysisError(
+            `You last analysed your patterns ${when}. You can run a new analysis once 30 days have passed.`
+          );
+          return;
+        }
+      }
+    }
+
     if (totalDreams < 3) {
       const msg =
         "You have only logged a few dreams so far. Patterns are still forming. Keep recording dreams and re run analysis once more data appears.";
@@ -319,10 +342,13 @@ export default function PatternsPage() {
             <p className="text-slate-300 text-sm">Loading your dreams...</p>
           ) : totalDreams === 0 ? (
             <div>
-              <p className="text-slate-100 mb-2">You have not logged any dreams yet.</p>
+              <p className="text-slate-100 mb-2">
+                You have not logged any dreams yet.
+              </p>
               <p className="text-slate-400 text-sm mb-4">
-                Start recording your dreams. As your archive grows, recurring symbols and themes
-                will emerge and this page will become meaningful.
+                Start recording your dreams. As your archive grows, recurring
+                symbols and themes will emerge and this page will become
+                meaningful.
               </p>
               <Link
                 href="/dreams/new"
@@ -334,13 +360,16 @@ export default function PatternsPage() {
           ) : (
             <div className="space-y-1">
               <p className="text-lg font-semibold mb-1">
-                You have logged {totalDreams} dream{totalDreams === 1 ? "" : "s"}.
+                You have logged {totalDreams} dream
+                {totalDreams === 1 ? "" : "s"}.
               </p>
               <p className="text-slate-400 text-sm">
                 Each dream adds more data to your personal dream map.
               </p>
               {lastAnalysedLabel && (
-                <p className="text-xs text-slate-500 mt-1">{lastAnalysedLabel}</p>
+                <p className="text-xs text-slate-500 mt-1">
+                  {lastAnalysedLabel}
+                </p>
               )}
             </div>
           )}
@@ -363,7 +392,8 @@ export default function PatternsPage() {
 
             {symbolCounts.length === 0 ? (
               <p className="text-slate-400 text-sm">
-                No symbols extracted yet. Generate interpretations to start building this list.
+                No symbols extracted yet. Generate interpretations to start
+                building this list.
               </p>
             ) : (
               <div className="flex flex-wrap gap-2">
@@ -395,7 +425,8 @@ export default function PatternsPage() {
 
             {themeCounts.length === 0 ? (
               <p className="text-slate-400 text-sm">
-                No themes extracted yet. Generate interpretations to start building this list.
+                No themes extracted yet. Generate interpretations to start
+                building this list.
               </p>
             ) : (
               <div className="flex flex-wrap gap-2">
@@ -417,12 +448,20 @@ export default function PatternsPage() {
         <section className="mb-6 rounded-2xl border border-white/10 bg-slate-950/80 backdrop-blur-md p-5 shadow-lg shadow-black/40">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-3">
             <div>
-              <h2 className="text-lg font-semibold">AI overview of your dream patterns</h2>
+              <h2 className="text-lg font-semibold">
+                AI overview of your dream patterns
+              </h2>
               <p className="text-xs text-slate-400 mt-1">
                 A concise summary connecting your recurring symbols and themes.
               </p>
+              <p className="text-[11px] text-slate-500">
+                To save compute, this analysis can be run at most once every 30
+                days.
+              </p>
               {lastAnalysedLabel && (
-                <p className="text-[11px] text-slate-500 mt-1">{lastAnalysedLabel}</p>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  {lastAnalysedLabel}
+                </p>
               )}
             </div>
             <button
@@ -448,7 +487,8 @@ export default function PatternsPage() {
             </p>
           ) : !analysing ? (
             <p className="text-sm text-slate-400">
-              Run an analysis to get a high level view of your recurring symbols and themes.
+              Run an analysis to get a high level view of your recurring
+              symbols and themes.
             </p>
           ) : null}
         </section>
@@ -475,33 +515,43 @@ export default function PatternsPage() {
                     View dream
                   </Link>
                 </div>
-                <p className="text-slate-100 line-clamp-2 mb-2">{dream.rawText}</p>
+                <p className="text-slate-100 line-clamp-2 mb-2">
+                  {dream.rawText}
+                </p>
 
                 <div className="flex flex-wrap gap-2">
                   {(dream.symbols ?? []).slice(0, 4).length > 0 && (
-                    <span className="text-[11px] text-slate-400 mr-1">Symbols:</span>
-                  )}
-                  {(dream.symbols ?? []).slice(0, 4).map((symbol, idx) => (
-                    <span
-                      key={`sym-${idx}`}
-                      className="px-2 py-0.5 rounded-full bg-slate-900 text-[10px] text-slate-100 border border-white/10"
-                    >
-                      {symbol}
+                    <span className="text-[11px] text-slate-400 mr-1">
+                      Symbols:
                     </span>
-                  ))}
+                  )}
+                  {(dream.symbols ?? [])
+                    .slice(0, 4)
+                    .map((symbol, idx) => (
+                      <span
+                        key={`sym-${idx}`}
+                        className="px-2 py-0.5 rounded-full bg-slate-900 text-[10px] text-slate-100 border border-white/10"
+                      >
+                        {symbol}
+                      </span>
+                    ))}
                 </div>
 
                 {(dream.themes ?? []).slice(0, 4).length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-2">
-                    <span className="text-[11px] text-slate-400 mr-1">Themes:</span>
-                    {(dream.themes ?? []).slice(0, 4).map((theme, idx) => (
-                      <span
-                        key={`theme-${idx}`}
-                        className="px-2 py-0.5 rounded-full bg-slate-900 text-[10px] text-slate-100 border border-white/10"
-                      >
-                        {theme}
-                      </span>
-                    ))}
+                    <span className="text-[11px] text-slate-400 mr-1">
+                      Themes:
+                    </span>
+                    {(dream.themes ?? [])
+                      .slice(0, 4)
+                      .map((theme, idx) => (
+                        <span
+                          key={`theme-${idx}`}
+                          className="px-2 py-0.5 rounded-full bg-slate-900 text-[10px] text-slate-100 border border-white/10"
+                        >
+                          {theme}
+                        </span>
+                      ))}
                   </div>
                 )}
               </li>
