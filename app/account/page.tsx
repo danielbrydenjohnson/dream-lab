@@ -282,7 +282,7 @@ export default function AccountPage() {
           <section className="lg:col-span-2 rounded-2xl border border-white/10 bg-slate-950/80 backdrop-blur-md p-5 sm:p-6 shadow-lg shadow-black/40">
             <h2 className="text-lg font-semibold mb-1">Profile</h2>
             <p className="text-xs text-slate-400 mb-4">
-              These details are used across Dream Lab and for future social or
+              These details are used across Onyva and for future social or
               sharing features.
             </p>
 
@@ -395,7 +395,7 @@ export default function AccountPage() {
 
             <p className="mt-3 text-[11px] text-red-100/80">
               All dreams and data associated with this email will be deleted
-              from Dream Lab.
+              from Onyva.
             </p>
 
             <div className="mt-4 border-t border-red-500/30 pt-3">

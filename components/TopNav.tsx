@@ -46,7 +46,7 @@ export default function TopNav() {
         <Link href="/" className="flex items-center gap-2">
           <div className="h-7 w-7 rounded-full bg-gradient-to-tr from-indigo-500 via-sky-400 to-violet-500 shadow-md shadow-indigo-500/40" />
           <span className="text-lg font-semibold tracking-tight text-white">
-            Dream Lab
+            Onyva
           </span>
         </Link>
 

@@ -90,7 +90,7 @@ export default function RegisterPage() {
       try {
         await sendEmailVerification(cred.user);
         setInfoMessage(
-          "Welcome to Dream Lab. Check your email to verify your account and complete setup."
+          "Welcome to Onyva. Check your email to verify your account and complete setup."
         );
       } catch (err) {
         console.error("Error sending verification email:", err);
@@ -133,7 +133,7 @@ export default function RegisterPage() {
           <div className="inline-flex items-center gap-2 mb-2">
             <div className="h-7 w-7 rounded-full bg-gradient-to-tr from-indigo-500 via-sky-400 to-violet-500 shadow-md shadow-indigo-500/40" />
             <h1 className="text-2xl font-semibold tracking-tight">
-              Dream Lab
+              Onyva
             </h1>
           </div>
           <p className="text-xs sm:text-sm text-slate-400">

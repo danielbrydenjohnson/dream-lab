@@ -150,14 +150,14 @@ export default function HomePage() {
           <section className="mt-16 flex flex-col items-center text-center">
             <div className="max-w-xl">
               <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight mb-4">
-                Dream Lab
+                Onyva
               </h1>
               <p className="text-slate-300 text-base sm:text-lg leading-relaxed mb-6">
                 <span className="text-white font-semibold">
                   Every night your mind runs a hidden simulation.
                 </span>{" "}
-                You wake up with fragments. Dream Lab is where you catch them,
-                stack them, and watch your own mythology emerge over time.
+                You wake up with fragments. Onyva is where you catch them, stack
+                them, and watch your own mythology emerge over time.
               </p>
 
               <div className="flex flex-wrap justify-center gap-3">
@@ -186,7 +186,7 @@ export default function HomePage() {
           <>
             <section className="mt-6 mb-6">
               <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight mb-2">
-                Your dream lab
+                Your dream overview
               </h1>
               <p className="text-slate-400 text-sm sm:text-base">
                 A quick snapshot of your dream activity, streaks, and shortcuts

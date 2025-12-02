@@ -45,7 +45,7 @@ export default function LoginPage() {
           <div className="inline-flex items-center gap-2 mb-2">
             <div className="h-7 w-7 rounded-full bg-gradient-to-tr from-indigo-500 via-sky-400 to-violet-500 shadow-md shadow-indigo-500/40" />
             <h1 className="text-2xl font-semibold tracking-tight">
-              Dream Lab
+              Onyva
             </h1>
           </div>
           <p className="text-xs sm:text-sm text-slate-400">

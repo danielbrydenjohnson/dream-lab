@@ -71,7 +71,7 @@ export default function LucidHubPage() {
               foundation for lucidity.
             </p>
             <p className="text-slate-400">
-              Dream Lab is built around this habit. The more you log, the more your dream world opens up.
+              Onyva is built around this habit. The more you log, the more your dream world opens up.
             </p>
           </div>
 
@@ -246,7 +246,7 @@ export default function LucidHubPage() {
             Tonight&apos;s suggested routine
           </h2>
           <ol className="list-decimal list-inside space-y-1 text-slate-300">
-            <li>Log your most recent dream in Dream Lab.</li>
+            <li>Log your most recent dream in Onyva.</li>
             <li>Set your intention clearly but gently.</li>
             <li>Use the fall asleep track as you lie down.</li>
             <li>If you wake in the early morning, use the Wake Back To Bed track.</li>
