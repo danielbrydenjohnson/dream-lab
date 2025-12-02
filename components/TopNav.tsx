@@ -27,7 +27,7 @@ export default function TopNav() {
       return "text-sm font-medium text-white px-3 py-1.5 rounded-full bg-white/10 shadow-sm";
     }
 
-    return "text-sm font-medium text-slate-200/80 hover:text-white px-3 py-1.5 rounded-full hover:bg:white/5 transition";
+    return "text-sm font-medium text-slate-200/80 hover:text-white px-3 py-1.5 rounded-full hover:bg-white/5 transition";
   }
 
   return (
@@ -66,6 +66,9 @@ export default function TopNav() {
             </Link>
             <Link href="/patterns" className={linkClass("/patterns")}>
               Patterns
+            </Link>
+            <Link href="/lucid" className={linkClass("/lucid")}>
+              Lucid Hub
             </Link>
             <Link href="/account" className={linkClass("/account")}>
               Account
