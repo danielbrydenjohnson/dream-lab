@@ -42,7 +42,7 @@ export default function TopNav() {
         shadow-lg shadow-black/40
       "
       >
-        {/* Logo and branding */}
+        {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
           <div className="h-7 w-7 rounded-full bg-gradient-to-tr from-indigo-500 via-sky-400 to-violet-500 shadow-md shadow-indigo-500/40" />
           <span className="text-lg font-semibold tracking-tight text-white">
@@ -50,7 +50,7 @@ export default function TopNav() {
           </span>
         </Link>
 
-        {/* Right side items */}
+        {/* Right side */}
         {!authChecked ? (
           <div className="flex items-center gap-2 text-xs text-slate-400">
             <span className="h-1.5 w-1.5 rounded-full bg-slate-400 animate-pulse" />
@@ -61,15 +61,30 @@ export default function TopNav() {
             <Link href="/dreams" className={linkClass("/dreams")}>
               Dreams
             </Link>
-            <Link href="/calendar" className={linkClass("/calendar")}>
-              Calendar
-            </Link>
+
             <Link href="/patterns" className={linkClass("/patterns")}>
               Patterns
             </Link>
+
+            <Link href="/calendar" className={linkClass("/calendar")}>
+              Calendar
+            </Link>
+
+            <Link
+              href="/friends-dreams"
+              className={linkClass("/friends-dreams")}
+            >
+              Shared Dreams
+            </Link>
+
             <Link href="/lucid" className={linkClass("/lucid")}>
               Lucid Hub
             </Link>
+
+            <Link href="/friends" className={linkClass("/friends")}>
+              Friends
+            </Link>
+
             <Link href="/account" className={linkClass("/account")}>
               Account
             </Link>

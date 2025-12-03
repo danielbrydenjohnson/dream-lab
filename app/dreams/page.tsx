@@ -21,6 +21,7 @@ type Dream = {
   createdAt: any; // Firestore Timestamp or string
   psychInterpretation?: string;
   mysticInterpretation?: string;
+  sharedWithUserIds?: string[];
 };
 
 export default function DreamsPage() {
@@ -51,9 +52,9 @@ export default function DreamsPage() {
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const items = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...(doc.data() as Omit<Dream, "id">),
+      const items = snapshot.docs.map((docSnap) => ({
+        id: docSnap.id,
+        ...(docSnap.data() as Omit<Dream, "id">),
       }));
       setDreams(items);
     });
@@ -101,7 +102,9 @@ export default function DreamsPage() {
           <TopNav />
           <div className="mt-16 flex flex-col items-center text-center">
             <div className="max-w-md rounded-2xl border border-white/10 bg-slate-950/70 backdrop-blur-md p-6 shadow-xl shadow-black/40">
-              <h1 className="text-2xl font-semibold mb-3">Sign in to continue</h1>
+              <h1 className="text-2xl font-semibold mb-3">
+                Sign in to continue
+              </h1>
               <p className="text-sm text-slate-300 mb-5">
                 You need to be logged in to view and search your dreams.
               </p>
@@ -227,6 +230,11 @@ export default function DreamsPage() {
                 Boolean(dream.psychInterpretation) ||
                 Boolean(dream.mysticInterpretation);
 
+              const sharedCount =
+                dream.sharedWithUserIds && dream.sharedWithUserIds.length
+                  ? dream.sharedWithUserIds.length
+                  : 0;
+
               return (
                 <Link
                   key={dream.id}
@@ -242,10 +250,20 @@ export default function DreamsPage() {
                         {dream.title?.trim() || "Untitled dream"}
                       </p>
                     </div>
-                    {interpreted && (
-                      <span className="inline-flex items-center rounded-full bg-emerald-500/15 px-3 py-1 text-[11px] font-medium text-emerald-300 border border-emerald-500/40">
-                        Interpreted
-                      </span>
+
+                    {(interpreted || sharedCount > 0) && (
+                      <div className="flex flex-col items-end gap-1">
+                        {interpreted && (
+                          <span className="inline-flex items-center rounded-full bg-emerald-500/15 px-3 py-1 text-[11px] font-medium text-emerald-300 border border-emerald-500/40">
+                            Interpreted
+                          </span>
+                        )}
+                        {sharedCount > 0 && (
+                          <span className="inline-flex items-center rounded-full bg-sky-500/15 px-3 py-1 text-[11px] font-medium text-sky-300 border border-sky-500/40">
+                            Shared with {sharedCount}
+                          </span>
+                        )}
+                      </div>
                     )}
                   </div>
                   <p className="text-sm text-slate-300 line-clamp-3 whitespace-pre-line">

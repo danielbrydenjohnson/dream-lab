@@ -9,6 +9,10 @@ import {
   deleteDoc,
   updateDoc,
   serverTimestamp,
+  collection,
+  query,
+  where,
+  getDocs,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
@@ -25,6 +29,14 @@ type Dream = {
   mysticInterpretation?: string;
   symbols?: string[];
   themes?: string[];
+  sharedWithUserIds?: string[];
+};
+
+type FriendSummary = {
+  uid: string;
+  name: string;
+  username?: string;
+  email: string;
 };
 
 export default function DreamDetailPage() {
@@ -53,6 +65,15 @@ export default function DreamDetailPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [isOwner, setIsOwner] = useState<boolean | null>(null);
+
+  // Sharing state
+  const [friends, setFriends] = useState<FriendSummary[]>([]);
+  const [friendsLoading, setFriendsLoading] = useState(false);
+  const [sharedWithIds, setSharedWithIds] = useState<string[]>([]);
+  const [sharingSaving, setSharingSaving] = useState(false);
+  const [sharingMessage, setSharingMessage] = useState<string | null>(null);
+  const [sharingExpanded, setSharingExpanded] = useState(false); // "show all" vs "show first few"
+  const [friendSearch, setFriendSearch] = useState("");
 
   // Track auth state
   useEffect(() => {
@@ -85,6 +106,7 @@ export default function DreamDetailPage() {
           setMysticText(fullDream.mysticInterpretation ?? null);
           setSymbols(fullDream.symbols ?? []);
           setThemes(fullDream.themes ?? []);
+          setSharedWithIds(fullDream.sharedWithUserIds ?? []);
         } else {
           setDream(null);
         }
@@ -111,6 +133,79 @@ export default function DreamDetailPage() {
 
     setIsOwner(dream.userId === userId);
   }, [authChecked, dream, userId]);
+
+  // Load friends (only if owner, since only owner can share)
+  useEffect(() => {
+    async function loadFriends() {
+      if (!userId || !isOwner) return;
+
+      setFriendsLoading(true);
+      try {
+        const reqRef = collection(db, "friendRequests");
+
+        const sentSnap = await getDocs(
+          query(reqRef, where("fromUserId", "==", userId))
+        );
+        const receivedSnap = await getDocs(
+          query(reqRef, where("toUserId", "==", userId))
+        );
+
+        const friendIds = new Set<string>();
+
+        sentSnap.forEach((docSnap) => {
+          const data = docSnap.data() as any;
+          if (data.status === "accepted") {
+            friendIds.add(data.toUserId);
+          }
+        });
+
+        receivedSnap.forEach((docSnap) => {
+          const data = docSnap.data() as any;
+          if (data.status === "accepted") {
+            friendIds.add(data.fromUserId);
+          }
+        });
+
+        const profiles: FriendSummary[] = [];
+        await Promise.all(
+          Array.from(friendIds).map(async (uid) => {
+            try {
+              const userRef = doc(db, "users", uid);
+              const userSnap = await getDoc(userRef);
+              if (userSnap.exists()) {
+                const d = userSnap.data() as any;
+                profiles.push({
+                  uid,
+                  name: d.name ?? "",
+                  username: d.username ?? "",
+                  email: d.email ?? "",
+                });
+              } else {
+                profiles.push({
+                  uid,
+                  name: "Unknown user",
+                  username: undefined,
+                  email: "",
+                });
+              }
+            } catch (err) {
+              console.error("Error loading friend profile:", err);
+            }
+          })
+        );
+
+        setFriends(profiles);
+      } catch (err) {
+        console.error("Error loading friends for sharing:", err);
+      } finally {
+        setFriendsLoading(false);
+      }
+    }
+
+    if (userId && isOwner) {
+      loadFriends();
+    }
+  }, [userId, isOwner]);
 
   function formatDate(value: any) {
     if (!value) return "";
@@ -151,13 +246,11 @@ export default function DreamDetailPage() {
       const newSymbols = Array.isArray(data.symbols) ? data.symbols : [];
       const newThemes = Array.isArray(data.themes) ? data.themes : [];
 
-      // Update local state
       setPsychText(newPsych);
       setMysticText(newMystic);
       setSymbols(newSymbols);
       setThemes(newThemes);
 
-      // Persist to Firestore as the logged in owner
       const ref = doc(db, "dreams", dream.id);
       await updateDoc(ref, {
         psychInterpretation: newPsych ?? "",
@@ -192,6 +285,28 @@ export default function DreamDetailPage() {
     }
   }
 
+  async function handleSaveSharing(e: React.FormEvent) {
+    e.preventDefault();
+    if (!dream || !isOwner) return;
+
+    setSharingSaving(true);
+    setSharingMessage(null);
+
+    try {
+      const ref = doc(db, "dreams", dream.id);
+      await updateDoc(ref, {
+        sharedWithUserIds: sharedWithIds,
+        updatedAt: serverTimestamp(),
+      });
+      setSharingMessage("Sharing updated.");
+    } catch (err) {
+      console.error("Error updating sharing:", err);
+      setSharingMessage("Failed to update sharing. Try again.");
+    } finally {
+      setSharingSaving(false);
+    }
+  }
+
   const alreadyInterpreted =
     Boolean(psychText && psychText.trim()) ||
     Boolean(mysticText && mysticText.trim()) ||
@@ -200,6 +315,40 @@ export default function DreamDetailPage() {
 
   const isStillLoading =
     loading || !authChecked || (dream && isOwner === null);
+
+  const ownerSharedCount = sharedWithIds.length;
+
+  const trimmedFriendSearch = friendSearch.trim().toLowerCase();
+  const filteredFriends =
+    trimmedFriendSearch === ""
+      ? friends
+      : friends.filter((f) => {
+          const name = (f.name || "").toLowerCase();
+          const username = (f.username || "").toLowerCase();
+          const email = (f.email || "").toLowerCase();
+          return (
+            name.includes(trimmedFriendSearch) ||
+            username.includes(trimmedFriendSearch) ||
+            email.includes(trimmedFriendSearch)
+          );
+        });
+
+  const VISIBLE_LIMIT = 5;
+  const totalFiltered = filteredFriends.length;
+
+  // If searching, always show all matches. If not searching, show 5 unless expanded.
+  const friendsToRender =
+    trimmedFriendSearch !== "" || sharingExpanded
+      ? filteredFriends
+      : filteredFriends.slice(0, VISIBLE_LIMIT);
+
+  function scrollToSharing() {
+    setSharingExpanded(true); // show all when jumping from header
+    const el = document.getElementById("sharing-section");
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }
 
   return (
     <main className="min-h-screen bg-slate-950 text-white relative overflow-hidden">
@@ -240,12 +389,12 @@ export default function DreamDetailPage() {
             </div>
           </div>
         ) : !dream ? (
-          // Not found
+          // Not found or no permission (rules will hide it)
           <div className="mt-20 flex justify-center">
             <div className="max-w-md rounded-2xl border border-white/10 bg-slate-950/80 backdrop-blur-md px-6 py-6 shadow-xl shadow-black/40 text-center">
               <h1 className="text-xl font-semibold mb-3">Dream not found</h1>
               <p className="text-sm text-slate-300 mb-5">
-                This dream does not exist or may have been deleted.
+                This dream does not exist, or you do not have access to view it.
               </p>
               <Link
                 href="/dreams"
@@ -255,69 +404,60 @@ export default function DreamDetailPage() {
               </Link>
             </div>
           </div>
-        ) : isOwner === false ? (
-          // Not owner
-          <div className="mt-20 flex justify-center">
-            <div className="max-w-md rounded-2xl border border-white/10 bg-slate-950/80 backdrop-blur-md px-6 py-6 shadow-xl shadow-black/40 text-center">
-              <h1 className="text-xl font-semibold mb-3">
-                You do not have access
-              </h1>
-              <p className="text-sm text-slate-300 mb-5">
-                This dream belongs to another user.
-              </p>
-              <Link
-                href="/dreams"
-                className="inline-flex items-center justify-center px-5 py-2.5 rounded-full bg-indigo-500 hover:bg-indigo-600 text-sm font-medium text-white shadow-md shadow-indigo-500/40 transition transform hover:-translate-y-0.5"
-              >
-                Back to your dreams
-              </Link>
-            </div>
-          </div>
         ) : (
-          // Owner view
+          // Dream view (owner or shared viewer)
           <div className="mt-4 mb-10">
             {/* Breadcrumb and actions */}
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <Link
                 href="/dreams"
-                className="inline-flex items-center text-xs sm:text-sm text-slate-300 hover:text-white"
+                className="inline-flex items-center text-xs sm:text-sm text-slate-300 hover:text:white"
               >
                 <span className="mr-1 text-slate-400">{"←"}</span>
                 Back to dreams
               </Link>
 
               <div className="flex flex-wrap items-center gap-2">
-                <Link
-                  href={`/dreams/${dream.id}/edit`}
-                  className="inline-flex items-center justify-center px-3 py-1.5 rounded-full bg-slate-800 hover:bg-slate-700 text-xs sm:text-sm font-medium text-slate-100 border border-white/10 transition"
-                >
-                  Edit
-                </Link>
+                {isOwner ? (
+                  <>
+                    <Link
+                      href={`/dreams/${dream.id}/edit`}
+                      className="inline-flex items-center justify-center px-3 py-1.5 rounded-full bg-slate-800 hover:bg-slate-700 text-xs sm:text-sm font-medium text-slate-100 border border-white/10 transition"
+                    >
+                      Edit
+                    </Link>
 
-                <button
-                  onClick={handleInterpretation}
-                  disabled={interpreting || alreadyInterpreted}
-                  className="inline-flex items-center justify-center px-3 py-1.5 rounded-full bg-indigo-500 hover:bg-indigo-600 disabled:bg-slate-700 text-xs sm:text-sm font-medium text-white shadow-md shadow-indigo-500/30 transition"
-                >
-                  {interpreting
-                    ? "Interpreting..."
-                    : alreadyInterpreted
-                    ? "Already interpreted"
-                    : "Generate interpretation"}
-                </button>
+                    <button
+                      onClick={handleInterpretation}
+                      disabled={interpreting || alreadyInterpreted}
+                      className="inline-flex items-center justify-center px-3 py-1.5 rounded-full bg-indigo-500 hover:bg-indigo-600 disabled:bg-slate-700 text-xs sm:text-sm font-medium text-white shadow-md shadow-indigo-500/30 transition"
+                    >
+                      {interpreting
+                        ? "Interpreting..."
+                        : alreadyInterpreted
+                        ? "Already interpreted"
+                        : "Generate interpretation"}
+                    </button>
 
-                <button
-                  onClick={handleDelete}
-                  disabled={deleting}
-                  className="inline-flex items-center justify-center px-3 py-1.5 rounded-full bg-red-600 hover:bg-red-700 disabled:bg-red-900 text-xs sm:text-sm font-medium text-white transition"
-                >
-                  {deleting ? "Deleting..." : "Delete"}
-                </button>
+                    <button
+                      onClick={handleDelete}
+                      disabled={deleting}
+                      className="inline-flex items-center justify-center px-3 py-1.5 rounded-full bg-red-600 hover:bg-red-700 disabled:bg-red-900 text-xs sm:text-sm font-medium text-white transition"
+                    >
+                      {deleting ? "Deleting..." : "Delete"}
+                    </button>
 
-                {alreadyInterpreted && (
-                  <p className="w-full text-[11px] text-slate-400 mt-1">
-                    This dream has already been interpreted. Interpretations are
-                    generated once per dream.
+                    {alreadyInterpreted && (
+                      <p className="w-full text-[11px] text-slate-400 mt-1">
+                        This dream has already been interpreted. Interpretations
+                        are generated once per dream.
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-[11px] text-slate-400">
+                    This dream was shared with you. You can read it, but cannot
+                    edit or re-interpret it.
                   </p>
                 )}
               </div>
@@ -334,6 +474,30 @@ export default function DreamDetailPage() {
               <p className="text-sm text-slate-400">
                 Full entry plus psychological and mystical interpretations.
               </p>
+
+              {isOwner && (
+                <p className="mt-2 text-xs text-slate-500">
+                  {ownerSharedCount === 0 ? (
+                    "Not shared. Only you can see this dream."
+                  ) : (
+                    <>
+                      Shared with{" "}
+                      <span className="text-slate-200 font-medium">
+                        {ownerSharedCount}{" "}
+                        {ownerSharedCount === 1 ? "friend" : "friends"}
+                      </span>
+                      .{" "}
+                      <button
+                        type="button"
+                        onClick={scrollToSharing}
+                        className="underline underline-offset-2 text-slate-200 hover:text-white"
+                      >
+                        Manage sharing
+                      </button>
+                    </>
+                  )}
+                </p>
+              )}
             </header>
 
             {errorMessage && (
@@ -410,8 +574,9 @@ export default function DreamDetailPage() {
                   </p>
                 ) : (
                   <p className="text-sm text-slate-400">
-                    Click "Generate interpretation" to see a psychology based
-                    view of this dream.
+                    {isOwner
+                      ? 'Click "Generate interpretation" to see a psychology based view of this dream.'
+                      : "The owner has not generated a psychological interpretation yet."}
                   </p>
                 )}
               </section>
@@ -426,12 +591,153 @@ export default function DreamDetailPage() {
                   </p>
                 ) : (
                   <p className="text-sm text-slate-400">
-                    Click "Generate interpretation" to see a more symbolic,
-                    mystical view of this dream.
+                    {isOwner
+                      ? 'Click "Generate interpretation" to see a more symbolic, mystical view of this dream.'
+                      : "The owner has not generated a mystical interpretation yet."}
                   </p>
                 )}
               </section>
             </div>
+
+            {/* Share with friends (owner only) */}
+            {isOwner && (
+              <section
+                id="sharing-section"
+                className="mt-6 rounded-2xl border border-white/10 bg-slate-950/80 backdrop-blur-md p-5 shadow-lg shadow-black/40"
+              >
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <h2 className="text-lg font-semibold">
+                    Share this dream with friends
+                  </h2>
+                </div>
+                <p className="text-xs text-slate-400 mb-3">
+                  Only the friends you select below will be able to read this
+                  dream when they are logged in.
+                </p>
+
+                {friendsLoading ? (
+                  <p className="text-xs text-slate-400">
+                    Loading your friends...
+                  </p>
+                ) : friends.length === 0 ? (
+                  <p className="text-xs text-slate-400">
+                    You do not have any friends connected yet. Go to the{" "}
+                    <Link
+                      href="/friends"
+                      className="underline underline-offset-2 text-slate-100"
+                    >
+                      Friends
+                    </Link>{" "}
+                    page to connect with someone first.
+                  </p>
+                ) : (
+                  <form
+                    onSubmit={handleSaveSharing}
+                    className="space-y-4 max-w-md"
+                  >
+                    {/* Search friends */}
+                    <div>
+                      <label className="block text-[11px] uppercase tracking-[0.18em] text-slate-400 mb-1">
+                        Search friends
+                      </label>
+                      <input
+                        type="text"
+                        value={friendSearch}
+                        onChange={(e) => setFriendSearch(e.target.value)}
+                        placeholder="Filter by name, username, or email..."
+                        className="w-full rounded-xl border border-white/10 bg-slate-900/70 px-3 py-2 text-xs sm:text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/70 focus:border-indigo-400 shadow-inner shadow-black/40"
+                      />
+                    </div>
+
+                    {/* Friends list */}
+                    <div className="space-y-2">
+                      {totalFiltered === 0 ? (
+                        <p className="text-[11px] text-slate-500">
+                          No friends match this search.
+                        </p>
+                      ) : (
+                        <>
+                          {friendsToRender.map((f) => {
+                            const checked = sharedWithIds.includes(f.uid);
+                            return (
+                              <label
+                                key={f.uid}
+                                className="flex items-center gap-2 rounded-xl border border-white/10 bg-slate-900/70 px-3 py-2 text-xs sm:text-sm cursor-pointer"
+                              >
+                                <input
+                                  type="checkbox"
+                                  className="h-4 w-4 rounded border-slate-500 bg-slate-900"
+                                  checked={checked}
+                                  onChange={(e) => {
+                                    const isChecked = e.target.checked;
+                                    setSharedWithIds((prev) => {
+                                      if (isChecked) {
+                                        if (prev.includes(f.uid)) return prev;
+                                        return [...prev, f.uid];
+                                      } else {
+                                        return prev.filter(
+                                          (idVal) => idVal !== f.uid
+                                        );
+                                      }
+                                    });
+                                  }}
+                                />
+                                <div>
+                                  <p className="text-slate-100">
+                                    {f.name ||
+                                      f.username ||
+                                      "Unnamed user"}
+                                  </p>
+                                  {f.username && (
+                                    <p className="text-[11px] text-slate-400">
+                                      @{f.username}
+                                    </p>
+                                  )}
+                                  {f.email && (
+                                    <p className="text-[11px] text-slate-500">
+                                      {f.email}
+                                    </p>
+                                  )}
+                                </div>
+                              </label>
+                            );
+                          })}
+
+                          {trimmedFriendSearch === "" &&
+                            totalFiltered > VISIBLE_LIMIT && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setSharingExpanded((prev) => !prev)
+                                }
+                                className="mt-1 text-[11px] text-slate-300 hover:text-white underline underline-offset-2"
+                              >
+                                {sharingExpanded
+                                  ? "Show fewer friends"
+                                  : `Show all ${totalFiltered} friends`}
+                              </button>
+                            )}
+                        </>
+                      )}
+                    </div>
+
+                    {sharingMessage && (
+                      <div className="rounded-xl border border-white/10 bg-slate-900/80 px-3 py-2 text-xs text-slate-100">
+                        {sharingMessage}
+                      </div>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={sharingSaving}
+                      className="inline-flex items-center justify-center px-4 py-2.5 rounded-full bg-indigo-500 hover:bg-indigo-600 disabled:bg-slate-700 text-xs sm:text-sm font-medium text-white shadow-md shadow-indigo-500/30 transition transform hover:-translate-y-0.5"
+                    >
+                      {sharingSaving ? "Saving..." : "Save sharing"}
+                    </button>
+                  </form>
+                )}
+              </section>
+            )}
           </div>
         )}
       </div>
