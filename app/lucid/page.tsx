@@ -246,7 +246,7 @@ export default function LucidHubPage() {
             Tonight&apos;s suggested routine
           </h2>
           <ol className="list-decimal list-inside space-y-1 text-slate-300">
-            <li>Log your most recent dream in Onyva.</li>
+            <li>Log your most recent dream in Onyva if you haven't already.</li>
             <li>Set your intention clearly but gently.</li>
             <li>Use the fall asleep track as you lie down.</li>
             <li>If you wake in the early morning, use the Wake Back To Bed track.</li>

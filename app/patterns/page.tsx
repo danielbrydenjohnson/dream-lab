@@ -43,7 +43,6 @@ export default function PatternsPage() {
   const [analysing, setAnalysing] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
 
-  const [showAllSymbols, setShowAllSymbols] = useState(false);
   const [showAllThemes, setShowAllThemes] = useState(false);
 
   // Auth listener
@@ -122,19 +121,11 @@ export default function PatternsPage() {
 
   const totalDreams = dreams.length;
 
-  const { symbolCounts, themeCounts } = useMemo(() => {
-    const symbolMap = new Map<string, number>();
+  const { themeCounts } = useMemo(() => {
     const themeMap = new Map<string, number>();
 
     for (const dream of dreams) {
-      const symbols = dream.symbols ?? [];
       const themes = dream.themes ?? [];
-
-      for (const s of symbols) {
-        const key = s.trim();
-        if (!key) continue;
-        symbolMap.set(key, (symbolMap.get(key) ?? 0) + 1);
-      }
 
       for (const t of themes) {
         const key = t.trim();
@@ -143,15 +134,11 @@ export default function PatternsPage() {
       }
     }
 
-    const symbolCounts: CountItem[] = Array.from(symbolMap.entries())
-      .map(([value, count]) => ({ value, count }))
-      .sort((a, b) => b.count - a.count);
-
     const themeCounts: CountItem[] = Array.from(themeMap.entries())
       .map(([value, count]) => ({ value, count }))
       .sort((a, b) => b.count - a.count);
 
-    return { symbolCounts, themeCounts };
+    return { themeCounts };
   }, [dreams]);
 
   function formatDate(value: any) {
@@ -218,7 +205,6 @@ export default function PatternsPage() {
           userId,
           createdAt: now,
           totalDreamsAtAnalysis: totalDreams,
-          symbolCountsSnapshot: symbolCounts,
           themeCountsSnapshot: themeCounts,
           analysis: msg,
         });
@@ -262,7 +248,6 @@ export default function PatternsPage() {
           userId,
           createdAt: nowIso,
           totalDreamsAtAnalysis: totalDreams,
-          symbolCountsSnapshot: symbolCounts,
           themeCountsSnapshot: themeCounts,
           analysis: text,
         });
@@ -306,10 +291,6 @@ export default function PatternsPage() {
     );
   }
 
-  const visibleSymbolCounts = showAllSymbols
-    ? symbolCounts
-    : symbolCounts.slice(0, 6);
-
   const visibleThemeCounts = showAllThemes
     ? themeCounts
     : themeCounts.slice(0, 6);
@@ -332,7 +313,7 @@ export default function PatternsPage() {
             Dream patterns
           </h1>
           <p className="text-sm text-slate-400">
-            Symbols and themes that keep showing up across your dreams.
+            Themes that keep showing up across your dreams.
           </p>
         </div>
 
@@ -347,8 +328,7 @@ export default function PatternsPage() {
               </p>
               <p className="text-slate-400 text-sm mb-4">
                 Start recording your dreams. As your archive grows, recurring
-                symbols and themes will emerge and this page will become
-                meaningful.
+                themes will emerge and this page will become meaningful.
               </p>
               <Link
                 href="/dreams/new"
@@ -375,41 +355,8 @@ export default function PatternsPage() {
           )}
         </section>
 
-        {/* Symbols + Themes */}
-        <section className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="rounded-2xl border border-white/10 bg-slate-950/80 backdrop-blur-md p-4 sm:p-5 shadow-lg shadow-black/40">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-semibold">Top symbols</h2>
-              {symbolCounts.length > 6 && (
-                <button
-                  onClick={() => setShowAllSymbols((v) => !v)}
-                  className="text-[11px] px-3 py-1 rounded-full border border-indigo-400/60 text-indigo-300 hover:bg-indigo-500/10 transition"
-                >
-                  {showAllSymbols ? "Show top only" : "Show all"}
-                </button>
-              )}
-            </div>
-
-            {symbolCounts.length === 0 ? (
-              <p className="text-slate-400 text-sm">
-                No symbols extracted yet. Generate interpretations to start
-                building this list.
-              </p>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {visibleSymbolCounts.map((item) => (
-                  <span
-                    key={item.value}
-                    className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-slate-900 text-[11px] text-slate-100 border border-white/10"
-                  >
-                    <span>{item.value}</span>
-                    <span className="text-slate-400">{item.count}×</span>
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-
+        {/* Themes */}
+        <section className="mb-6">
           <div className="rounded-2xl border border-white/10 bg-slate-950/80 backdrop-blur-md p-4 sm:p-5 shadow-lg shadow-black/40">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-semibold">Top themes</h2>
@@ -452,7 +399,7 @@ export default function PatternsPage() {
                 AI overview of your dream patterns
               </h2>
               <p className="text-xs text-slate-400 mt-1">
-                A concise summary connecting your recurring symbols and themes.
+                A concise summary connecting your recurring themes.
               </p>
               <p className="text-[11px] text-slate-500">
                 To save compute, this analysis can be run at most once every 30
@@ -488,7 +435,7 @@ export default function PatternsPage() {
           ) : !analysing ? (
             <p className="text-sm text-slate-400">
               Run an analysis to get a high level view of your recurring
-              symbols and themes.
+              themes.
             </p>
           ) : null}
         </section>
@@ -519,26 +466,8 @@ export default function PatternsPage() {
                   {dream.rawText}
                 </p>
 
-                <div className="flex flex-wrap gap-2">
-                  {(dream.symbols ?? []).slice(0, 4).length > 0 && (
-                    <span className="text-[11px] text-slate-400 mr-1">
-                      Symbols:
-                    </span>
-                  )}
-                  {(dream.symbols ?? [])
-                    .slice(0, 4)
-                    .map((symbol, idx) => (
-                      <span
-                        key={`sym-${idx}`}
-                        className="px-2 py-0.5 rounded-full bg-slate-900 text-[10px] text-slate-100 border border-white/10"
-                      >
-                        {symbol}
-                      </span>
-                    ))}
-                </div>
-
                 {(dream.themes ?? []).slice(0, 4).length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-2">
+                  <div className="mt-1.5 flex flex-wrap gap-2">
                     <span className="text-[11px] text-slate-400 mr-1">
                       Themes:
                     </span>
