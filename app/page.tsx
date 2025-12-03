@@ -14,6 +14,7 @@ import { auth } from "@/lib/firebaseAuth";
 import { onAuthStateChanged } from "firebase/auth";
 import TopNav from "@/components/TopNav";
 import { calculateStreaks, DreamForStreaks } from "@/lib/streaks";
+import DreamInsightPanel from "@/components/DreamInsightPanel";
 
 type Dream = {
   id: string;
@@ -316,7 +317,7 @@ export default function HomePage() {
 
             {/* Empty state */}
             {totalDreams === 0 && !loadingDreams && (
-              <section className="rounded-2xl border border-dashed border-slate-700 bg-slate-950/70 p-5 sm:p-6">
+              <section className="rounded-2xl border border-dashed border-slate-700 bg-slate-950/70 p-5 sm:p-6 mb-6">
                 <h2 className="text-lg font-semibold mb-2">
                   Start mapping your dream world
                 </h2>
@@ -334,6 +335,9 @@ export default function HomePage() {
                 </Link>
               </section>
             )}
+
+            {/* Dream insight panel */}
+            <DreamInsightPanel />
           </>
         )}
       </div>
