@@ -148,40 +148,144 @@ export default function HomePage() {
           </div>
         ) : !userId ? (
           // LOGGED OUT VIEW
-          <section className="mt-16 flex flex-col items-center text-center">
-            <div className="max-w-xl">
-              <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight mb-4">
-                Onyva
-              </h1>
-              <p className="text-slate-300 text-base sm:text-lg leading-relaxed mb-6">
-                <span className="text-white font-semibold">
-                  Every night your mind runs a hidden simulation.
-                </span>{" "}
-                You wake up with fragments. Onyva is where you catch them, stack
-                them, and watch your own mythology emerge over time.
-              </p>
+          <div className="mt-16 mb-24">
+            {/* Hero */}
+            <section className="flex flex-col items-center text-center">
+              <div className="max-w-2xl">
+                <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight mb-4">
+                  Onyva
+                </h1>
+                <p className="text-slate-300 text-base sm:text-lg leading-relaxed mb-6">
+                  <span className="text-white font-semibold">
+                    A dream intelligence system that helps you understand the
+                    patterns behind your nights.
+                  </span>
+                </p>
+                <p className="text-slate-300 text-sm sm:text-base leading-relaxed mb-8">
+                  Your dreams are not random. They are signals from the deeper
+                  layers of your mind. Onyva helps you capture them, interpret
+                  them, and follow the threads that appear over weeks, months,
+                  and years.
+                </p>
 
-              <div className="flex flex-wrap justify-center gap-3">
-                <Link
-                  href="/register"
-                  className="inline-flex items-center justify-center px-5 py-2.5 rounded-full bg-indigo-500 hover:bg-indigo-600 text-sm sm:text-base font-medium text-white shadow-lg shadow-indigo-500/25 transition transform hover:-translate-y-0.5"
-                >
-                  Get started
-                </Link>
-                <Link
-                  href="/login"
-                  className="inline-flex items-center justify-center px-5 py-2.5 rounded-full border border-slate-700 bg-slate-900/60 hover:bg-slate-800 text-sm sm:text-base font-medium text-slate-100 transition"
-                >
-                  Log in
-                </Link>
+                <div className="flex flex-wrap justify-center gap-3">
+                  <Link
+                    href="/register"
+                    className="inline-flex items-center justify-center px-5 py-2.5 rounded-full bg-indigo-500 hover:bg-indigo-600 text-sm sm:text-base font-medium text-white shadow-lg shadow-indigo-500/25 transition transform hover:-translate-y-0.5"
+                  >
+                    Get started
+                  </Link>
+                  <Link
+                    href="/login"
+                    className="inline-flex items-center justify-center px-5 py-2.5 rounded-full border border-slate-700 bg-slate-900/60 hover:bg-slate-800 text-sm sm:text-base font-medium text-slate-100 transition"
+                  >
+                    Log in
+                  </Link>
+                </div>
+
+                <p className="mt-6 text-xs text-slate-500">
+                  No feeds, no likes. Just you, your dreams, and the patterns
+                  underneath.
+                </p>
+
+                <p className="mt-2 text-[11px] text-slate-600">
+                  Onyva is evolving. New features are released regularly as we
+                  build the first intelligent map of the dreaming mind.
+                </p>
               </div>
+            </section>
 
-              <p className="mt-6 text-xs text-slate-500">
-                No feeds, no likes. Just you, your dreams, and the patterns
-                underneath.
+            {/* Divider */}
+            <div className="mt-16 border-t border-slate-800/80" />
+
+            {/* Section 1: What Onyva does today */}
+            <section className="mt-10">
+              <h2 className="text-xl sm:text-2xl font-semibold mb-4 text-center">
+                A place to record, understand, and explore your dreams.
+              </h2>
+              <div className="max-w-2xl mx-auto mt-6 space-y-6 text-sm sm:text-base text-slate-300">
+                <div>
+                  <h3 className="text-sm sm:text-base font-semibold text-slate-100 mb-1">
+                    Record your dreams
+                  </h3>
+                  <p>
+                    A calm space to write your dreams soon after waking. No
+                    noise, no feeds, no judgement.
+                  </p>
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-semibold text-slate-100 mb-1">
+                    AI enriched interpretations
+                  </h3>
+                  <p>
+                    Thoughtful psychological and symbolic reflections generated
+                    for each dream.
+                  </p>
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-semibold text-slate-100 mb-1">
+                    Patterns across time
+                  </h3>
+                  <p>
+                    Themes, symbols, and recurring emotions. Onyva highlights
+                    the threads that keep showing up.
+                  </p>
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-semibold text-slate-100 mb-1">
+                    Dream clusters and sharing
+                  </h3>
+                  <p>
+                    See which dreams sit close together beneath the surface,
+                    and share selected dreams with trusted friends.
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            {/* Section 2: Why dreams matter */}
+            <section className="mt-16">
+              <h2 className="text-xl sm:text-2xl font-semibold mb-4 text-center">
+                Your dreams are not random.
+              </h2>
+              <div className="max-w-2xl mx-auto text-sm sm:text-base text-slate-300 space-y-3 text-center">
+                <p>
+                  Every night, your mind runs a private simulation that blends
+                  memory, emotion, and imagination. Most of it disappears the
+                  moment you wake up. The rest becomes fragments.
+                </p>
+                <p>
+                  Onyva helps you capture these fragments and see what they are
+                  pointing to. Dreams are often the most honest data we have
+                  about ourselves. We just rarely organise them.
+                </p>
+              </div>
+            </section>
+
+            {/* Section 3: Where Onyva is going */}
+            <section className="mt-16 mb-8">
+              <h2 className="text-xl sm:text-2xl font-semibold mb-4 text-center">
+                We are building something deeper.
+              </h2>
+              <p className="max-w-2xl mx-auto text-sm sm:text-base text-slate-300 text-center">
+                Onyva is an ongoing project. Over time, it will grow into a full
+                dream intelligence system with:
               </p>
-            </div>
-          </section>
+              <ul className="max-w-2xl mx-auto mt-4 space-y-1 list-disc list-inside text-sm sm:text-base text-slate-300 text-left">
+                <li>Emotional timelines</li>
+                <li>Archetype detection</li>
+                <li>Dream maps built from embeddings</li>
+                <li>Voice logging with AI transcription</li>
+                <li>Monthly psyche reports</li>
+                <li>Lucid dreaming tools</li>
+                <li>Dream reconstruction visuals</li>
+                <li>Cross dream pattern discovery</li>
+              </ul>
+              <p className="mt-6 text-sm text-slate-300 text-center">
+                You can start today. Onyva will grow with you.
+              </p>
+            </section>
+          </div>
         ) : (
           // LOGGED IN DASHBOARD
           <>
@@ -267,13 +371,13 @@ export default function HomePage() {
                 {!loadingDreams && (
                   <div className="mt-3 space-y-1.5">
                     <p className="text-xs text-slate-400">
-                      Best streak:{" "}
+                      Best streak: {""}
                       <span className="text-slate-100">
                         {bestStreak} day{bestStreak === 1 ? "" : "s"}
                       </span>
                     </p>
                     <p className="text-xs text-slate-400">
-                      This week:{" "}
+                      This week: {""}
                       <span className="text-slate-100">
                         {daysLoggedThisWeek} day
                         {daysLoggedThisWeek === 1 ? "" : "s"}

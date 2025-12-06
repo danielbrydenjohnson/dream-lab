@@ -22,6 +22,7 @@ type Dream = {
   psychInterpretation?: string;
   mysticInterpretation?: string;
   sharedWithUserIds?: string[];
+  embedding?: number[]; // new optional field
 };
 
 export default function DreamsPage() {
@@ -124,10 +125,7 @@ export default function DreamsPage() {
   return (
     <main className="min-h-screen bg-slate-950 text-white relative overflow-hidden">
       {/* Background glow */}
-      <div
-        className="pointer-events-none absolute inset-0 opacity-60"
-        aria-hidden="true"
-      >
+      <div className="pointer-events-none absolute inset-0 opacity-60">
         <div className="absolute -top-40 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-indigo-600/40 blur-3xl" />
         <div className="absolute bottom-[-120px] right-[-60px] h-72 w-72 rounded-full bg-sky-500/30 blur-3xl" />
       </div>
@@ -139,11 +137,11 @@ export default function DreamsPage() {
         <div className="mt-4 mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight">
-              Your dreams
+              Your dream library
             </h1>
             <p className="text-sm text-slate-400 mt-1">
-              Browse, search, and revisit the simulations you have already
-              captured.
+              An archive of your nights. Scroll back through past dreams and
+              revisit the patterns that have already started to form.
             </p>
           </div>
           <Link
@@ -224,8 +222,8 @@ export default function DreamsPage() {
             </p>
           </section>
         ) : (
-          <div className="flex flex-col gap-4">
-            {filteredDreams.map((dream) => {
+          <div className="mt-4">
+            {filteredDreams.map((dream, index) => {
               const interpreted =
                 Boolean(dream.psychInterpretation) ||
                 Boolean(dream.mysticInterpretation);
@@ -235,37 +233,39 @@ export default function DreamsPage() {
                   ? dream.sharedWithUserIds.length
                   : 0;
 
+              const isLast = index === filteredDreams.length - 1;
+
               return (
                 <Link
                   key={dream.id}
                   href={`/dreams/${dream.id}`}
-                  className="block rounded-2xl border border-white/10 bg-slate-950/80 p-4 sm:p-5 hover:border-indigo-400/80 hover:bg-slate-900/90 hover:shadow-xl hover:shadow-indigo-500/20 transition transform hover:-translate-y-0.5"
+                  className={`block py-4 transition ${
+                    isLast ? "" : "border-b border-slate-800/80"
+                  } hover:bg-slate-900/40`}
                 >
-                  <div className="flex items-start justify-between gap-3 mb-2">
-                    <div>
-                      <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400 mb-1">
-                        {formatDate(dream.createdAt)}
-                      </p>
-                      <p className="text-base sm:text-lg font-semibold text-white">
-                        {dream.title?.trim() || "Untitled dream"}
-                      </p>
-                    </div>
-
+                  <div className="flex items-start justify-between gap-3 mb-1">
+                    <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">
+                      {formatDate(dream.createdAt)}
+                    </p>
                     {(interpreted || sharedCount > 0) && (
                       <div className="flex flex-col items-end gap-1">
                         {interpreted && (
-                          <span className="inline-flex items-center rounded-full bg-emerald-500/15 px-3 py-1 text-[11px] font-medium text-emerald-300 border border-emerald-500/40">
+                          <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-3 py-1 text-[11px] font-medium text-emerald-300 border border-emerald-500/30">
                             Interpreted
                           </span>
                         )}
                         {sharedCount > 0 && (
-                          <span className="inline-flex items-center rounded-full bg-sky-500/15 px-3 py-1 text-[11px] font-medium text-sky-300 border border-sky-500/40">
+                          <span className="inline-flex items-center rounded-full bg-sky-500/10 px-3 py-1 text-[11px] font-medium text-sky-300 border border-sky-500/30">
                             Shared with {sharedCount}
                           </span>
                         )}
                       </div>
                     )}
                   </div>
+
+                  <p className="text-sm sm:text-base font-semibold text-slate-100 mb-1">
+                    {dream.title?.trim() || "Untitled dream"}
+                  </p>
                   <p className="text-sm text-slate-300 line-clamp-3 whitespace-pre-line">
                     {dream.rawText}
                   </p>

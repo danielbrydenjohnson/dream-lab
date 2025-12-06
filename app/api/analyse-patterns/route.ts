@@ -25,6 +25,7 @@ export async function POST(req: Request) {
     }[] = body.dreams ?? [];
 
     const totalDreams: number = body.totalDreams ?? dreams.length;
+    const windowDreams: number = body.windowDreams ?? dreams.length;
 
     if (!Array.isArray(dreams) || dreams.length === 0) {
       return NextResponse.json(
@@ -40,13 +41,14 @@ export async function POST(req: Request) {
 You are an analyst of personal dream patterns.
 
 You receive:
-- A list of dreams with date, symbols, and themes
-- The total number of dreams
+- A compact list of dreams with date, symbols, and themes
+- The total number of dreams ever logged
+- The number of dreams in the current analysis window
 
 Your job:
-1) Identify recurring symbols or themes across dreams.
+1) Identify recurring symbols or themes across these dreams.
 2) Explain possible psychological or mythic meaning, but avoid certainty.
-3) If there are only a few dreams, clearly say that the dataset is small and conclusions are tentative.
+3) If there are only a few dreams in the window, clearly say that the dataset is small and conclusions are tentative.
 4) Suggest one or two practical things the dreamer can pay attention to next time they log dreams.
 
 Constraints on length:
@@ -65,7 +67,8 @@ Return the final answer as plain text only.
 `;
 
     const userPrompt = `
-Total dreams: ${totalDreams}
+Total dreams ever logged: ${totalDreams}
+Dreams in this analysis window: ${windowDreams}
 
 Here is a compact list of dreams with their extracted symbols and themes:
 

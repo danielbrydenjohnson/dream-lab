@@ -18,6 +18,10 @@ import { db } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebaseAuth";
 import TopNav from "@/components/TopNav";
+import {
+  getSimilarDreamsForUser,
+  SimilarDream,
+} from "@/lib/dreamSimilarity";
 
 type Dream = {
   id: string;
@@ -72,8 +76,15 @@ export default function DreamDetailPage() {
   const [sharedWithIds, setSharedWithIds] = useState<string[]>([]);
   const [sharingSaving, setSharingSaving] = useState(false);
   const [sharingMessage, setSharingMessage] = useState<string | null>(null);
-  const [sharingExpanded, setSharingExpanded] = useState(false); // "show all" vs "show first few"
+  const [sharingExpanded, setSharingExpanded] = useState(false);
   const [friendSearch, setFriendSearch] = useState("");
+
+  // Similar dreams state
+  const [similarDreams, setSimilarDreams] = useState<SimilarDream[] | null>(
+    null
+  );
+  const [similarLoading, setSimilarLoading] = useState(false);
+  const [similarError, setSimilarError] = useState<string | null>(null);
 
   // Track auth state
   useEffect(() => {
@@ -207,6 +218,30 @@ export default function DreamDetailPage() {
     }
   }, [userId, isOwner]);
 
+  // Load similar dreams (owner only, once we know dream and user)
+  useEffect(() => {
+    async function loadSimilar() {
+      if (!userId || !dream || !isOwner) return;
+
+      setSimilarLoading(true);
+      setSimilarError(null);
+
+      try {
+        const results = await getSimilarDreamsForUser(userId, dream.id, 5);
+        setSimilarDreams(results);
+      } catch (err) {
+        console.error("Error loading similar dreams:", err);
+        setSimilarError("Could not load similar dreams right now.");
+      } finally {
+        setSimilarLoading(false);
+      }
+    }
+
+    if (isOwner && dream && userId) {
+      loadSimilar();
+    }
+  }, [userId, dream, isOwner]);
+
   function formatDate(value: any) {
     if (!value) return "";
     if (typeof value === "string") {
@@ -336,14 +371,13 @@ export default function DreamDetailPage() {
   const VISIBLE_LIMIT = 5;
   const totalFiltered = filteredFriends.length;
 
-  // If searching, always show all matches. If not searching, show 5 unless expanded.
   const friendsToRender =
     trimmedFriendSearch !== "" || sharingExpanded
       ? filteredFriends
       : filteredFriends.slice(0, VISIBLE_LIMIT);
 
   function scrollToSharing() {
-    setSharingExpanded(true); // show all when jumping from header
+    setSharingExpanded(true);
     const el = document.getElementById("sharing-section");
     if (el) {
       el.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -371,7 +405,6 @@ export default function DreamDetailPage() {
             </div>
           </div>
         ) : !userId ? (
-          // No auth
           <div className="mt-20 flex justify-center">
             <div className="max-w-md rounded-2xl border border-white/10 bg-slate-950/80 backdrop-blur-md px-6 py-6 shadow-xl shadow-black/40 text-center">
               <h1 className="text-xl font-semibold mb-3">
@@ -389,7 +422,6 @@ export default function DreamDetailPage() {
             </div>
           </div>
         ) : !dream ? (
-          // Not found or no permission (rules will hide it)
           <div className="mt-20 flex justify-center">
             <div className="max-w-md rounded-2xl border border-white/10 bg-slate-950/80 backdrop-blur-md px-6 py-6 shadow-xl shadow-black/40 text-center">
               <h1 className="text-xl font-semibold mb-3">Dream not found</h1>
@@ -405,7 +437,6 @@ export default function DreamDetailPage() {
             </div>
           </div>
         ) : (
-          // Dream view (owner or shared viewer)
           <div className="mt-4 mb-10">
             {/* Breadcrumb and actions */}
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -599,6 +630,122 @@ export default function DreamDetailPage() {
               </section>
             </div>
 
+            {/* Similar dreams (owner only) */}
+            {isOwner && (
+              <section className="mt-6 rounded-2xl border border-white/10 bg-slate-950/80 backdrop-blur-md p-5 shadow-lg shadow-black/40">
+                <h2 className="text-lg font-semibold mb-2">
+                  Similar dreams
+                </h2>
+                <p className="text-xs text-slate-400 mb-3">
+                  Based on the deeper patterns in your entries, these dreams sit
+                  closest to this one in your inner landscape.
+                </p>
+
+                {similarLoading && (
+                  <p className="text-sm text-slate-300">
+                    Looking for nearby dreams...
+                  </p>
+                )}
+
+                {similarError && (
+                  <p className="text-sm text-red-200">{similarError}</p>
+                )}
+
+                {!similarLoading &&
+                  !similarError &&
+                  (similarDreams == null || similarDreams.length === 0) && (
+                    <p className="text-sm text-slate-400">
+                      No close matches yet. As you log more dreams, patterns
+                      will start to appear here.
+                    </p>
+                  )}
+
+                {!similarLoading &&
+                  !similarError &&
+                  similarDreams &&
+                  similarDreams.length > 0 && (
+                    <div className="flex flex-col gap-3">
+                      {similarDreams.map((item) => {
+                        const similarityPercent = Math.round(
+                          item.similarity * 100
+                        );
+
+                        const sourceSymbols = symbols || [];
+                        const targetSymbols = Array.isArray(
+                          (item.dream as any).symbols
+                        )
+                          ? ((item.dream as any).symbols as string[])
+                          : [];
+
+                        const sourceThemes = themes || [];
+                        const targetThemes = Array.isArray(
+                          (item.dream as any).themes
+                        )
+                          ? ((item.dream as any).themes as string[])
+                          : [];
+
+                        const symbolOverlap = sourceSymbols.filter((s) =>
+                          targetSymbols.includes(s)
+                        );
+                        const themeOverlap = sourceThemes.filter((t) =>
+                          targetThemes.includes(t)
+                        );
+
+                        const reasonParts: string[] = [];
+                        if (symbolOverlap.length > 0) {
+                          reasonParts.push(
+                            `Shared symbols: ${symbolOverlap.join(", ")}`
+                          );
+                        }
+                        if (themeOverlap.length > 0) {
+                          reasonParts.push(
+                            `Shared themes: ${themeOverlap.join(", ")}`
+                          );
+                        }
+
+                        const reasonText =
+                          reasonParts.length > 0
+                            ? reasonParts.join(" · ")
+                            : "Similar emotional tone and storyline.";
+
+                        return (
+                          <Link
+                            key={item.id}
+                            href={`/dreams/${item.id}`}
+                            className="block rounded-xl border border-white/10 bg-slate-900/70 px-4 py-3 hover:border-indigo-400/80 hover:bg-slate-900/90 hover:shadow-lg hover:shadow-indigo-500/20 transition transform hover:-translate-y-0.5"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400 mb-1">
+                                  {formatDate(item.createdAt)}
+                                </p>
+                                <p className="text-sm font-medium text-slate-100">
+                                  {item.title?.trim() || "Untitled dream"}
+                                </p>
+                              </div>
+                              <div className="flex items-center">
+                                <span className="inline-flex items-center rounded-full bg-indigo-500/15 px-3 py-1 text-[11px] font-medium text-indigo-200 border border-indigo-500/40">
+                                  {similarityPercent}%
+                                  <span className="ml-1 text-slate-300">
+                                    similarity
+                                  </span>
+                                </span>
+                              </div>
+                            </div>
+                            <p className="mt-2 text-xs text-slate-300 line-clamp-2 whitespace-pre-line">
+                              {item.dream.rawText}
+                            </p>
+                            <p className="mt-1 text-[11px] text-slate-400">
+                              {reasonText}
+                            </p>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+              </section>
+            )}
+
             {/* Share with friends (owner only) */}
             {isOwner && (
               <section
@@ -684,9 +831,7 @@ export default function DreamDetailPage() {
                                 />
                                 <div>
                                   <p className="text-slate-100">
-                                    {f.name ||
-                                      f.username ||
-                                      "Unnamed user"}
+                                    {f.name || f.username || "Unnamed user"}
                                   </p>
                                   {f.username && (
                                     <p className="text-[11px] text-slate-400">

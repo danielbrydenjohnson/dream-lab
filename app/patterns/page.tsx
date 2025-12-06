@@ -24,11 +24,33 @@ type Dream = {
   userId?: string;
   symbols?: string[];
   themes?: string[];
+  embedding?: number[];
 };
 
 type CountItem = {
   value: string;
   count: number;
+};
+
+type ClusterDream = {
+  id: string;
+  title?: string;
+  rawText: string;
+  createdAt: any;
+  symbols: string[];
+  themes: string[];
+  embedding: number[];
+};
+
+type DreamCluster = {
+  id: string;
+  dreams: ClusterDream[];
+  centroid: number[];
+  dreamCount: number;
+  startDate: Date;
+  endDate: Date;
+  topSymbols: string[];
+  topThemes: string[];
 };
 
 export default function PatternsPage() {
@@ -37,13 +59,25 @@ export default function PatternsPage() {
   const [authChecked, setAuthChecked] = useState(false);
   const [loadingDreams, setLoadingDreams] = useState(true);
 
-  // Cached analysis
+  // Cached pattern analysis
   const [analysis, setAnalysis] = useState<string | null>(null);
   const [lastAnalysedAt, setLastAnalysedAt] = useState<string | null>(null);
   const [analysing, setAnalysing] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
 
+  // Cached top themes analysis
+  const [topThemesAnalysis, setTopThemesAnalysis] = useState<string | null>(
+    null
+  );
+  const [topThemesLastAnalysedAt, setTopThemesLastAnalysedAt] = useState<
+    string | null
+  >(null);
+  const [topThemesAnalysing, setTopThemesAnalysing] = useState(false);
+  const [topThemesError, setTopThemesError] = useState<string | null>(null);
+  const [topThemesRecentRuns, setTopThemesRecentRuns] = useState<string[]>([]);
+
   const [showAllThemes, setShowAllThemes] = useState(false);
+  const [showAllClusters, setShowAllClusters] = useState(false);
 
   // Auth listener
   useEffect(() => {
@@ -91,20 +125,24 @@ export default function PatternsPage() {
     return () => unsub();
   }, [userId]);
 
-  // Load last saved analysis
+  // Load last saved analyses (patterns + top themes)
   useEffect(() => {
     if (!userId) {
       setAnalysis(null);
       setLastAnalysedAt(null);
+      setTopThemesAnalysis(null);
+      setTopThemesLastAnalysedAt(null);
+      setTopThemesRecentRuns([]);
       return;
     }
 
-    async function loadAnalysis(uid: string) {
+    async function load(uid: string) {
       try {
-        const ref = doc(db, "patternAnalyses", uid);
-        const snap = await getDoc(ref);
-        if (snap.exists()) {
-          const data = snap.data() as any;
+        // Pattern analysis
+        const patternRef = doc(db, "patternAnalyses", uid);
+        const patternSnap = await getDoc(patternRef);
+        if (patternSnap.exists()) {
+          const data = patternSnap.data() as any;
           setAnalysis(data.analysis ?? null);
           setLastAnalysedAt(data.createdAt ?? null);
         } else {
@@ -114,14 +152,45 @@ export default function PatternsPage() {
       } catch (error) {
         console.error("Error loading saved pattern analysis:", error);
       }
+
+      try {
+        // Top themes analysis
+        const themeRef = doc(db, "themeAnalyses", uid);
+        const themeSnap = await getDoc(themeRef);
+        if (themeSnap.exists()) {
+          const data = themeSnap.data() as any;
+          setTopThemesAnalysis(data.analysis ?? null);
+          setTopThemesLastAnalysedAt(data.createdAt ?? null);
+          if (Array.isArray(data.recentRuns)) {
+            setTopThemesRecentRuns(data.recentRuns as string[]);
+          } else {
+            setTopThemesRecentRuns([]);
+          }
+        } else {
+          setTopThemesAnalysis(null);
+          setTopThemesLastAnalysedAt(null);
+          setTopThemesRecentRuns([]);
+        }
+      } catch (error) {
+        console.error("Error loading saved theme analysis:", error);
+      }
     }
 
-    loadAnalysis(userId);
+    load(userId);
   }, [userId]);
 
   const totalDreams = dreams.length;
 
-  const { themeCounts } = useMemo(() => {
+  const {
+    themeCounts,
+    clusters,
+    dreamsWithEmbeddingCount,
+  }: {
+    themeCounts: CountItem[];
+    clusters: DreamCluster[];
+    dreamsWithEmbeddingCount: number;
+  } = useMemo(() => {
+    // Theme counts across all dreams
     const themeMap = new Map<string, number>();
 
     for (const dream of dreams) {
@@ -138,7 +207,162 @@ export default function PatternsPage() {
       .map(([value, count]) => ({ value, count }))
       .sort((a, b) => b.count - a.count);
 
-    return { themeCounts };
+    // Embedding based clusters
+    const dreamsWithEmbedding: ClusterDream[] = dreams
+      .filter(
+        (d) =>
+          Array.isArray(d.embedding) && d.embedding && d.embedding.length > 0
+      )
+      .map((d) => ({
+        id: d.id,
+        title: (d as any).title,
+        rawText: d.rawText,
+        createdAt: d.createdAt,
+        symbols: d.symbols ?? [],
+        themes: d.themes ?? [],
+        embedding: d.embedding as number[],
+      }));
+
+    const dreamsWithEmbeddingCount = dreamsWithEmbedding.length;
+    const clusters: DreamCluster[] = [];
+
+    if (dreamsWithEmbedding.length >= 2) {
+      const SIM_THRESHOLD = 0.78;
+
+      function cosineSimilarity(a: number[], b: number[]): number {
+        let dot = 0;
+        let na = 0;
+        let nb = 0;
+        const len = Math.min(a.length, b.length);
+        for (let i = 0; i < len; i++) {
+          const va = a[i];
+          const vb = b[i];
+          dot += va * vb;
+          na += va * va;
+          nb += vb * vb;
+        }
+        if (na === 0 || nb === 0) return 0;
+        return dot / (Math.sqrt(na) * Math.sqrt(nb));
+      }
+
+      function averageEmbedding(vectors: number[][]): number[] {
+        if (vectors.length === 0) return [];
+        const dim = vectors[0].length;
+        const out = new Array(dim).fill(0);
+        for (const v of vectors) {
+          for (let i = 0; i < dim; i++) {
+            out[i] += v[i];
+          }
+        }
+        for (let i = 0; i < dim; i++) {
+          out[i] /= vectors.length;
+        }
+        return out;
+      }
+
+      for (const dream of dreamsWithEmbedding) {
+        if (clusters.length === 0) {
+          clusters.push({
+            id: `cluster-1`,
+            dreams: [dream],
+            centroid: dream.embedding,
+            dreamCount: 1,
+            startDate: new Date(
+              dream.createdAt?.toDate?.() ?? dream.createdAt
+            ),
+            endDate: new Date(dream.createdAt?.toDate?.() ?? dream.createdAt),
+            topSymbols: [],
+            topThemes: [],
+          });
+          continue;
+        }
+
+        let bestIdx = -1;
+        let bestSim = -1;
+
+        clusters.forEach((cluster, idx) => {
+          const sim = cosineSimilarity(cluster.centroid, dream.embedding);
+          if (sim > bestSim) {
+            bestSim = sim;
+            bestIdx = idx;
+          }
+        });
+
+        if (bestIdx >= 0 && bestSim >= SIM_THRESHOLD) {
+          const cluster = clusters[bestIdx];
+          cluster.dreams.push(dream);
+          cluster.dreamCount = cluster.dreams.length;
+          cluster.centroid = averageEmbedding(
+            cluster.dreams.map((d) => d.embedding)
+          );
+
+          const dreamDate = new Date(
+            dream.createdAt?.toDate?.() ?? dream.createdAt
+          );
+          if (dreamDate < cluster.startDate) cluster.startDate = dreamDate;
+          if (dreamDate > cluster.endDate) cluster.endDate = dreamDate;
+        } else {
+          clusters.push({
+            id: `cluster-${clusters.length + 1}`,
+            dreams: [dream],
+            centroid: dream.embedding,
+            dreamCount: 1,
+            startDate: new Date(
+              dream.createdAt?.toDate?.() ?? dream.createdAt
+            ),
+            endDate: new Date(dream.createdAt?.toDate?.() ?? dream.createdAt),
+            topSymbols: [],
+            topThemes: [],
+          });
+        }
+      }
+
+      // Compute top symbols and themes per cluster
+      let enriched = clusters.map((cluster) => {
+        const symbolMap = new Map<string, number>();
+        const themeMapCluster = new Map<string, number>();
+
+        for (const d of cluster.dreams) {
+          for (const s of d.symbols ?? []) {
+            const key = s.trim();
+            if (!key) continue;
+            symbolMap.set(key, (symbolMap.get(key) ?? 0) + 1);
+          }
+          for (const t of d.themes ?? []) {
+            const key = t.trim();
+            if (!key) continue;
+            themeMapCluster.set(key, (themeMapCluster.get(key) ?? 0) + 1);
+          }
+        }
+
+        const topSymbols = Array.from(symbolMap.entries())
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 3)
+          .map(([value]) => value);
+
+        const topThemes = Array.from(themeMapCluster.entries())
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 3)
+          .map(([value]) => value);
+
+        return {
+          ...cluster,
+          topSymbols,
+          topThemes,
+        };
+      });
+
+      // Sort by size descending
+      enriched.sort((a, b) => b.dreamCount - a.dreamCount);
+
+      return {
+        themeCounts,
+        clusters: enriched,
+        dreamsWithEmbeddingCount,
+      };
+    }
+
+    return { themeCounts, clusters: [], dreamsWithEmbeddingCount };
   }, [dreams]);
 
   function formatDate(value: any) {
@@ -150,6 +374,13 @@ export default function PatternsPage() {
       return value.toDate().toLocaleDateString();
     }
     return String(value);
+  }
+
+  function formatDateRange(start: Date, end: Date) {
+    const startStr = start.toLocaleDateString();
+    const endStr = end.toLocaleDateString();
+    if (startStr === endStr) return startStr;
+    return `${startStr} to ${endStr}`;
   }
 
   function formatLastAnalysedLabel(createdAtIso: string | null) {
@@ -205,7 +436,8 @@ export default function PatternsPage() {
           userId,
           createdAt: now,
           totalDreamsAtAnalysis: totalDreams,
-          themeCountsSnapshot: themeCounts,
+          analysisWindowDreams: totalDreams,
+          analysisWindowType: "last-available",
           analysis: msg,
         });
       }
@@ -215,7 +447,11 @@ export default function PatternsPage() {
     try {
       setAnalysing(true);
 
-      const dreamsForApi = dreams.map((dream) => ({
+      // Use at most the last 30 dreams for analysis
+      const dreamsForWindow = dreams.slice(0, 30);
+      const windowDreams = dreamsForWindow.length;
+
+      const dreamsForApi = dreamsForWindow.map((dream) => ({
         id: dream.id,
         createdAt: formatDate(dream.createdAt),
         symbols: dream.symbols ?? [],
@@ -228,6 +464,7 @@ export default function PatternsPage() {
         body: JSON.stringify({
           dreams: dreamsForApi,
           totalDreams,
+          windowDreams,
         }),
       });
 
@@ -248,7 +485,8 @@ export default function PatternsPage() {
           userId,
           createdAt: nowIso,
           totalDreamsAtAnalysis: totalDreams,
-          themeCountsSnapshot: themeCounts,
+          analysisWindowDreams: windowDreams,
+          analysisWindowType: "last-30",
           analysis: text,
         });
       }
@@ -257,6 +495,106 @@ export default function PatternsPage() {
       setAnalysisError("Failed to analyse patterns. Try again later.");
     } finally {
       setAnalysing(false);
+    }
+  }
+
+  async function handleAnalyseTopThemes() {
+    setTopThemesError(null);
+
+    if (!userId) {
+      setTopThemesError("You need to be signed in to analyse your themes.");
+      return;
+    }
+
+    // Limit: 8 runs per 30 days
+    const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+    const nowMs = Date.now();
+
+    const cleanedRuns = topThemesRecentRuns
+      .map((iso) => new Date(iso))
+      .filter((d) => !Number.isNaN(d.getTime()))
+      .filter((d) => nowMs - d.getTime() <= THIRTY_DAYS_MS)
+      .map((d) => d.toISOString());
+
+    if (cleanedRuns.length >= 8) {
+      setTopThemesError(
+        "You have already run this themes analysis 8 times in the last 30 days. Let some new dreams accumulate before running it again."
+      );
+      setTopThemesRecentRuns(cleanedRuns);
+      return;
+    }
+
+    // Use the same themeCounts that power the Top themes chips
+    if (themeCounts.length === 0) {
+      const msg =
+        "There are no themes to analyse yet. Generate some interpretations first, then try again.";
+
+      setTopThemesAnalysis(msg);
+      const nowIso = new Date().toISOString();
+      setTopThemesLastAnalysedAt(nowIso);
+      const updatedRuns = [...cleanedRuns, nowIso];
+      setTopThemesRecentRuns(updatedRuns);
+
+      await setDoc(doc(db, "themeAnalyses", userId), {
+        userId,
+        createdAt: nowIso,
+        totalDreamsAtAnalysis: totalDreams,
+        themeWindowSize: 0,
+        topThemesSnapshot: [],
+        analysis: msg,
+        recentRuns: updatedRuns,
+      });
+
+      return;
+    }
+
+    // Take the top 50 themes by frequency
+    const themesForWindow = themeCounts.slice(0, 50);
+    // Convert to plain string labels for the API
+    const themeLabels = themesForWindow.map((t) => t.value);
+
+    try {
+      setTopThemesAnalysing(true);
+
+      const res = await fetch("/api/analyse-top-themes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          themes: themeLabels,
+          totalDreams,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`API error: ${res.status}`);
+      }
+
+      const data = await res.json();
+      const text: string =
+        data.analysis ??
+        "No analysis returned. Keep logging dreams and try again later.";
+
+      const nowIso = new Date().toISOString();
+      const updatedRuns = [...cleanedRuns, nowIso];
+
+      setTopThemesAnalysis(text);
+      setTopThemesLastAnalysedAt(nowIso);
+      setTopThemesRecentRuns(updatedRuns);
+
+      await setDoc(doc(db, "themeAnalyses", userId), {
+        userId,
+        createdAt: nowIso,
+        totalDreamsAtAnalysis: totalDreams,
+        themeWindowSize: themeLabels.length,
+        topThemesSnapshot: themeLabels,
+        analysis: text,
+        recentRuns: updatedRuns,
+      });
+    } catch (error) {
+      console.error("Error analysing top themes:", error);
+      setTopThemesError("Failed to analyse your themes. Try again later.");
+    } finally {
+      setTopThemesAnalysing(false);
     }
   }
 
@@ -296,6 +634,17 @@ export default function PatternsPage() {
     : themeCounts.slice(0, 6);
 
   const lastAnalysedLabel = formatLastAnalysedLabel(lastAnalysedAt);
+  const topThemesLastLabel = formatLastAnalysedLabel(topThemesLastAnalysedAt);
+
+  // AI overview uses last 30 dreams at most
+  const currentWindowCount = Math.min(30, totalDreams);
+
+  // Only show clusters with at least 2 dreams
+  const visibleClusters = clusters.filter((c) => c.dreamCount >= 2);
+  const CLUSTER_PREVIEW_COUNT = 3;
+  const clustersToRender = showAllClusters
+    ? visibleClusters
+    : visibleClusters.slice(0, CLUSTER_PREVIEW_COUNT);
 
   return (
     <main className="min-h-screen bg-slate-950 text-white relative overflow-hidden">
@@ -313,7 +662,7 @@ export default function PatternsPage() {
             Dream patterns
           </h1>
           <p className="text-sm text-slate-400">
-            Themes that keep showing up across your dreams.
+            A quieter view of what keeps repeating across your dreams.
           </p>
         </div>
 
@@ -327,8 +676,8 @@ export default function PatternsPage() {
                 You have not logged any dreams yet.
               </p>
               <p className="text-slate-400 text-sm mb-4">
-                Start recording your dreams. As your archive grows, recurring
-                themes will emerge and this page will become meaningful.
+                Once you start recording dreams, this page will begin to show
+                the themes and clusters that repeat over time.
               </p>
               <Link
                 href="/dreams/new"
@@ -344,7 +693,8 @@ export default function PatternsPage() {
                 {totalDreams === 1 ? "" : "s"}.
               </p>
               <p className="text-slate-400 text-sm">
-                Each dream adds more data to your personal dream map.
+                Each new dream adds another data point to your personal dream
+                map.
               </p>
               {lastAnalysedLabel && (
                 <p className="text-xs text-slate-500 mt-1">
@@ -355,11 +705,16 @@ export default function PatternsPage() {
           )}
         </section>
 
-        {/* Themes */}
+        {/* Themes list */}
         <section className="mb-6">
           <div className="rounded-2xl border border-white/10 bg-slate-950/80 backdrop-blur-md p-4 sm:p-5 shadow-lg shadow-black/40">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-semibold">Top themes</h2>
+              <div>
+                <h2 className="text-lg font-semibold">Top themes</h2>
+                <p className="text-xs text-slate-400 mt-1">
+                  Themes that appear most often across your dreams.
+                </p>
+              </div>
               {themeCounts.length > 6 && (
                 <button
                   onClick={() => setShowAllThemes((v) => !v)}
@@ -391,7 +746,55 @@ export default function PatternsPage() {
           </div>
         </section>
 
-        {/* AI Overview */}
+        {/* Top themes AI analysis */}
+        <section className="mb-6 rounded-2xl border border-white/10 bg-slate-950/80 backdrop-blur-md p-5 shadow-lg shadow-black/40">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-3">
+            <div>
+              <h2 className="text-lg font-semibold">
+                AI reflection on your top themes
+              </h2>
+              <p className="text-xs text-slate-400 mt-1">
+                A short reflection on how your most frequent themes may relate
+                to each other.
+              </p>
+              {topThemesLastLabel && (
+                <p className="text-[11px] text-slate-500 mt-1">
+                  {topThemesLastLabel}
+                </p>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={handleAnalyseTopThemes}
+              disabled={topThemesAnalysing || totalDreams === 0}
+              className="inline-flex items-center justify-center px-4 py-2.5 rounded-full bg-indigo-500 hover:bg-indigo-600 disabled:opacity-60 disabled:cursor-not-allowed text-xs sm:text-sm font-medium text-white shadow-md shadow-indigo-500/30 transition"
+            >
+              {topThemesAnalysing
+                ? "Analysing..."
+                : topThemesAnalysis
+                ? "Re analyse themes"
+                : "Analyse themes"}
+            </button>
+          </div>
+
+          {topThemesError && (
+            <p className="text-sm text-red-400 mb-2">{topThemesError}</p>
+          )}
+
+          {topThemesAnalysis ? (
+            <p className="text-sm text-slate-100 whitespace-pre-line leading-relaxed">
+              {topThemesAnalysis}
+            </p>
+          ) : !topThemesAnalysing ? (
+            <p className="text-sm text-slate-400">
+              Run an analysis to get a short reflection on how your most common
+              themes may connect. The view will sharpen as themes repeat more
+              often.
+            </p>
+          ) : null}
+        </section>
+
+        {/* AI Overview for recent dreams */}
         <section className="mb-6 rounded-2xl border border-white/10 bg-slate-950/80 backdrop-blur-md p-5 shadow-lg shadow-black/40">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-3">
             <div>
@@ -399,11 +802,11 @@ export default function PatternsPage() {
                 AI overview of your dream patterns
               </h2>
               <p className="text-xs text-slate-400 mt-1">
-                A concise summary connecting your recurring themes.
+                A concise summary weaving together recurring themes across your
+                recent dreams.
               </p>
               <p className="text-[11px] text-slate-500">
-                To save compute, this analysis can be run at most once every 30
-                days.
+                Uses up to your last 30 dreams to keep the signal focused.
               </p>
               {lastAnalysedLabel && (
                 <p className="text-[11px] text-slate-500 mt-1">
@@ -429,63 +832,154 @@ export default function PatternsPage() {
           )}
 
           {analysis ? (
-            <p className="text-sm text-slate-100 whitespace-pre-line leading-relaxed">
-              {analysis}
-            </p>
+            <>
+              <p className="text-sm text-slate-100 whitespace-pre-line leading-relaxed">
+                {analysis}
+              </p>
+              <p className="mt-2 text-[11px] text-slate-500">
+                This overview is based on your last {currentWindowCount} dream
+                {currentWindowCount === 1 ? "" : "s"}.
+              </p>
+            </>
           ) : !analysing ? (
             <p className="text-sm text-slate-400">
-              Run an analysis to get a high level view of your recurring
-              themes.
+              Run an analysis to get a high level view of recurring themes from
+              your recent dreams.
             </p>
           ) : null}
         </section>
 
-        {/* Recent dreams */}
-        <section className="rounded-2xl border border-white/10 bg-slate-950/80 backdrop-blur-md p-5 shadow-lg shadow-black/40">
-          <h2 className="text-lg font-semibold mb-3">
-            Recent dreams used in this analysis
-          </h2>
-          <ul className="space-y-3 text-sm">
-            {dreams.slice(0, 10).map((dream) => (
-              <li
-                key={dream.id}
-                className="rounded-2xl border border-white/10 bg-slate-950/90 p-3 shadow-inner shadow-black/40"
-              >
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[11px] text-slate-400">
-                    {formatDate(dream.createdAt)}
-                  </span>
-                  <Link
-                    href={`/dreams/${dream.id}`}
-                    className="text-[11px] text-indigo-300 hover:text-indigo-200"
-                  >
-                    View dream
-                  </Link>
-                </div>
-                <p className="text-slate-100 line-clamp-2 mb-2">
-                  {dream.rawText}
-                </p>
+        {/* Dream clusters */}
+        <section className="mb-6 rounded-2xl border border-white/10 bg-slate-950/80 backdrop-blur-md p-5 shadow-lg shadow-black/40">
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <h2 className="text-lg font-semibold">Dream clusters</h2>
+              <p className="text-xs text-slate-400 mt-1">
+                Embeddings group dreams that sit close together in your inner
+                landscape. These clusters often reflect repeating storylines or
+                emotional terrains.
+              </p>
+            </div>
+            <div className="text-right text-[11px] text-slate-500">
+              <p>Dreams with embeddings: {dreamsWithEmbeddingCount}</p>
+              <p>Clusters with shared patterns: {visibleClusters.length}</p>
+            </div>
+          </div>
 
-                {(dream.themes ?? []).slice(0, 4).length > 0 && (
-                  <div className="mt-1.5 flex flex-wrap gap-2">
-                    <span className="text-[11px] text-slate-400 mr-1">
-                      Themes:
-                    </span>
-                    {(dream.themes ?? [])
-                      .slice(0, 4)
-                      .map((theme, idx) => (
-                        <span
-                          key={`theme-${idx}`}
-                          className="px-2 py-0.5 rounded-full bg-slate-900 text-[10px] text-slate-100 border border-white/10"
-                        >
-                          {theme}
-                        </span>
-                      ))}
-                  </div>
-                )}
-              </li>
-            ))}
-          </ul>
+          {dreamsWithEmbeddingCount === 0 ? (
+            <p className="text-sm text-slate-400 mt-2">
+              Once some of your dreams have embeddings, this section will start
+              to show how they group together in meaning.
+            </p>
+          ) : visibleClusters.length === 0 ? (
+            <p className="text-sm text-slate-400 mt-2">
+              You already have dreams with embeddings, but none are similar
+              enough yet to form clear clusters. For now your dream space is
+              quite varied. As similar storylines and emotions repeat, groups
+              will appear here.
+            </p>
+          ) : (
+            <>
+              <div className="flex flex-col gap-4 mt-3">
+                {clustersToRender.map((cluster, idx) => {
+                  const labelTheme = cluster.topThemes[0];
+                  const labelSymbol = cluster.topSymbols[0];
+                  const titleSuffix = labelTheme || labelSymbol || "";
+                  const title = titleSuffix
+                    ? `Cluster ${idx + 1} · ${titleSuffix}`
+                    : `Cluster ${idx + 1}`;
+
+                  const parts: string[] = [];
+                  if (cluster.topSymbols.length > 0) {
+                    parts.push(
+                      `Shared symbols: ${cluster.topSymbols.join(", ")}`
+                    );
+                  }
+                  if (cluster.topThemes.length > 0) {
+                    parts.push(
+                      `Shared themes: ${cluster.topThemes.join(", ")}`
+                    );
+                  }
+                  const subtitle =
+                    parts.length > 0
+                      ? parts.join(" · ")
+                      : "Dreams that sit close together in tone and storyline.";
+
+                  const sampleDreams = cluster.dreams.slice(0, 3);
+                  const extraCount =
+                    cluster.dreamCount > sampleDreams.length
+                      ? cluster.dreamCount - sampleDreams.length
+                      : 0;
+
+                  return (
+                    <div
+                      key={cluster.id}
+                      className="rounded-2xl border border-white/10 bg-slate-950/90 p-4 shadow-inner shadow-black/40"
+                    >
+                      <div className="flex items-center justify-between mb-1.5">
+                        <h3 className="text-sm font-semibold">{title}</h3>
+                        <p className="text-[11px] text-slate-400">
+                          {cluster.dreamCount} dream
+                          {cluster.dreamCount === 1 ? "" : "s"} ·{" "}
+                          {formatDateRange(
+                            cluster.startDate,
+                            cluster.endDate
+                          )}
+                        </p>
+                      </div>
+                      <p className="text-[11px] text-slate-400 mb-3">
+                        {subtitle}
+                      </p>
+
+                      <div className="space-y-2">
+                        {sampleDreams.map((d) => (
+                          <Link
+                            key={d.id}
+                            href={`/dreams/${d.id}`}
+                            className="block rounded-xl border border-white/10 bg-slate-900/80 px-3 py-2 hover:border-indigo-400/80 hover:bg-slate-900 hover:shadow-lg hover:shadow-indigo-500/20 transition transform hover:-translate-y-0.5"
+                          >
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-[11px] text-slate-400">
+                                {formatDate(d.createdAt)}
+                              </span>
+                              <span className="text-[11px] text-indigo-300">
+                                View dream
+                              </span>
+                            </div>
+                            <p className="text-[13px] text-slate-100 line-clamp-2">
+                              {d.title?.trim() || "Untitled dream"}
+                            </p>
+                            <p className="mt-1 text-[11px] text-slate-300 line-clamp-2 whitespace-pre-line">
+                              {d.rawText}
+                            </p>
+                          </Link>
+                        ))}
+                      </div>
+
+                      {extraCount > 0 && (
+                        <p className="mt-2 text-[11px] text-slate-500">
+                          + {extraCount} more dream
+                          {extraCount === 1 ? "" : "s"} in this cluster.
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {visibleClusters.length > CLUSTER_PREVIEW_COUNT && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllClusters((prev) => !prev)}
+                  className="mt-3 text-[11px] px-3 py-1 rounded-full border border-indigo-400/60 text-indigo-300 hover:bg-indigo-500/10 transition"
+                >
+                  {showAllClusters
+                    ? "Show fewer clusters"
+                    : `Show all ${visibleClusters.length} clusters`}
+                </button>
+              )}
+            </>
+          )}
         </section>
       </div>
     </main>

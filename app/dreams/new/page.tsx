@@ -3,7 +3,13 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import {
+  addDoc,
+  collection,
+  serverTimestamp,
+  doc,
+  updateDoc,
+} from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { auth } from "@/lib/firebaseAuth";
 import { onAuthStateChanged } from "firebase/auth";
@@ -50,11 +56,13 @@ export default function NewDreamPage() {
 
     try {
       const finalTitle = title.trim();
+      const finalText = text.trim();
 
-      await addDoc(collection(db, "dreams"), {
+      // 1) Create the dream doc (allowed by Firestore rules because user is authed)
+      const docRef = await addDoc(collection(db, "dreams"), {
         userId,
         title: finalTitle,
-        rawText: text.trim(),
+        rawText: finalText,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         psychInterpretation: "",
@@ -62,6 +70,46 @@ export default function NewDreamPage() {
         symbols: [],
         themes: [],
       });
+
+      // 2) Ask server for embedding (no Firestore here, just OpenAI)
+      const combinedText = `${finalTitle}\n\n${finalText}`;
+
+      try {
+        const res = await fetch("/api/embed-dream", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            text: combinedText,
+          }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const embedding = data.embedding;
+
+          if (Array.isArray(embedding)) {
+            // 3) Write embedding from client side (user is authed so rules allow it)
+            const ref = doc(db, "dreams", docRef.id);
+            await updateDoc(ref, {
+              embedding,
+              updatedAt: serverTimestamp(),
+            });
+          } else {
+            console.warn("No valid embedding returned from /api/embed-dream");
+          }
+        } else {
+          const errorPayload = await res.json().catch(() => null);
+          console.error(
+            "embed-dream API error:",
+            res.status,
+            errorPayload || "(no body)"
+          );
+        }
+      } catch (err) {
+        console.error("Failed to call /api/embed-dream:", err);
+      }
 
       router.push("/dreams");
     } catch (error) {
